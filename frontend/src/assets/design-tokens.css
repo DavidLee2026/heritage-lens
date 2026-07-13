@@ -1,0 +1,91 @@
+/* ================================================================ */
+/*  设计系统 Token · 银骨纸韵                                         */
+/* ================================================================ */
+:root {
+  /* 字体 */
+  --font-display: 'Noto Serif TC', 'Songti SC', serif;
+  --font-body:    'Noto Sans TC', 'PingFang SC', sans-serif;
+  --font-mono:    'Inter', 'SF Mono', monospace;
+
+  /* 字号层级 */
+  --fs-hero:  28px;
+  --fs-h2:    22px;
+  --fs-h3:    18px;
+  --fs-body:  14px;
+  --fs-small: 12px;
+  --fs-tiny:  11px;
+
+  /* 间距 */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-2xl: 48px;
+
+  /* 圆角 */
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-full: 50%;
+
+  /* 动效 */
+  --motion-fast:   200ms;
+  --motion-normal: 300ms;
+  --motion-slow:   500ms;
+  --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:  cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ═══════════════════════════════════ */
+  /*  色彩 · 银骨纸韵（银骨 · 纸韵 · 绣色） */
+  /* ═══════════════════════════════════ */
+
+  /* 纸 · 底色系 */
+  --bg-primary:   #f2eadc;
+  --bg-elevated:  #ffffff;
+  --bg-card:      #ffffff;
+
+  /* 墨 · 文字系 — 绣线墨 */
+  --text-primary:   #1e2b38;
+  --text-secondary: #8a8580;
+  --text-hover:     #6a6255;
+  --text-tertiary:  #b8b6b0;
+
+  /* 银 · 边框系 — 素银灰 / 旧铜色 */
+  --border-primary: #d4c5a9;
+  --border-light:   #e8e0d4;
+  --border-gold:    #d4c5a9;
+
+  /* 绣 · 点缀色 — 点朱红（≤5%面积） */
+  --accent:       #9e2a2b;
+  --accent-light: #f5e8e4;
+  --accent-hover: #7e2021;
+  --accent-gold:  #d4a853;
+
+  /* 银 · 素银色（卡牌气泡、图鉴底纹） */
+  --silver: #e0d9ce;
+
+  /* 特殊 */
+  --color-overlay-gold: #d4a853;
+}
+
+/* 全局样式：背景 + 重置 */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 无障碍：减少动效 */

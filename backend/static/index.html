@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>非遗映象</title><link rel="stylesheet" href="/static/design-tokens.css"/><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet"/><script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-body);-webkit-font-smoothing:antialiased}
+#app{max-width:480px;margin:0 auto;padding:0 16px 48px;min-height:100dvh}
+.app-header{position:relative;text-align:center;padding:32px 0 24px;overflow:hidden}
+.header-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:200px;height:120px;background:radial-gradient(ellipse,var(--accent-gold) 0%,transparent 70%);opacity:.15;pointer-events:none}
+.header-title{font-family:var(--font-display);font-size:var(--fs-hero);font-weight:700;letter-spacing:.08em;position:relative}
+.header-subtitle{font-size:var(--fs-small);color:var(--text-tertiary);letter-spacing:.3em;margin-top:4px}
+.section{margin-bottom:24px}
+.section-title{font-family:var(--font-display);font-size:var(--fs-h3);font-weight:600;margin-bottom:16px;letter-spacing:.05em}
+.upload-zone{position:relative;border:2px dashed var(--border-primary);border-radius:var(--radius-lg);padding:32px 16px;text-align:center;cursor:pointer;transition:all .3s var(--ease-out);background:var(--bg-elevated);min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.upload-zone:hover{border-color:var(--accent-gold);background:var(--accent-light)}
+.upload-zone--filled{border-style:solid;border-color:var(--border-light);padding:8px}
+.upload-zone input{display:none}
+.upload-icon{font-size:36px;margin-bottom:8px}
+.upload-text{font-size:var(--fs-body);color:var(--text-secondary)}
+.upload-hint{font-size:var(--fs-tiny);color:var(--text-tertiary);margin-top:4px}
+.upload-preview{max-height:200px;border-radius:var(--radius-md);object-fit:contain}
+.upload-reset{margin-top:8px;font-size:var(--fs-tiny);color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;padding:4px 12px;text-decoration:underline}
+.style-grid{display:flex;gap:8px}
+.style-card{flex:1;border:2px solid var(--border-light);border-radius:var(--radius-lg);overflow:hidden;cursor:pointer;background:var(--bg-elevated);transition:all .3s var(--ease-out);padding:0;position:relative;font-family:inherit;text-align:left}
+.style-card:hover{border-color:var(--border-primary);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.style-card--active{border-color:var(--accent-gold);box-shadow:0 0 0 1px var(--accent-gold),0 4px 16px rgba(212,168,83,.15)}
+.style-card-visual{height:60px;display:flex;align-items:center;justify-content:center}
+.style-card-emoji{font-size:26px}
+.style-card-info{padding:8px 8px 16px}
+.style-card-name{display:block;font-size:var(--fs-body);font-weight:600}
+.style-card-desc{display:block;font-size:var(--fs-tiny);color:var(--text-tertiary);margin-top:2px}
+.style-card-check{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:var(--accent-gold);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.generate-btn{display:block;width:100%;padding:14px 24px;border:none;border-radius:var(--radius-lg);font-family:var(--font-display);font-size:var(--fs-h3);font-weight:600;cursor:pointer;transition:all .3s var(--ease-out);letter-spacing:.05em;margin-bottom:24px}
+.generate-btn.idle{background:linear-gradient(135deg,var(--text-primary) 0%,#2a3a48 100%);color:var(--bg-elevated)}
+.generate-btn.idle:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 20px rgba(30,43,56,.25)}
+.generate-btn.idle:disabled{opacity:.4;cursor:not-allowed}
+.generate-btn.generating{background:linear-gradient(135deg,var(--text-secondary) 0%,var(--border-primary) 100%);color:var(--bg-elevated);cursor:wait}
+.generate-btn.done{background:linear-gradient(135deg,var(--accent) 0%,#7e2021 100%);color:var(--bg-elevated)}
+.generate-btn.done:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(158,42,43,.3)}
+.generate-btn.error{background:linear-gradient(135deg,#b85450 0%,#9e2a2b 100%);color:var(--bg-elevated)}
+.generate-loading{display:flex;align-items:center;justify-content:center;gap:8px}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.result-card{background:var(--bg-elevated);border-radius:var(--radius-xl);overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.06);animation:fadeUp .5s var(--ease-out)}
+.result-image-wrap{position:relative;width:100%;aspect-ratio:3/4;background:var(--bg-primary)}
+.result-image{width:100%;height:100%;object-fit:cover;display:block}
+.result-badge{position:absolute;top:16px;right:16px;padding:4px 8px;border-radius:var(--radius-sm);font-size:var(--fs-small);font-weight:600;display:flex;flex-direction:column;align-items:center;backdrop-filter:blur(4px);font-family:var(--font-display)}
+.badge--qing{background:rgba(224,217,206,.85);color:var(--text-secondary)}
+.badge--zhen{background:rgba(248,237,208,.85);color:#8a7a4a}
+.badge--shen{background:linear-gradient(135deg,rgba(212,168,83,.9),rgba(158,42,43,.85));color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.2)}
+.badge-label{letter-spacing:.1em}
+.badge-stars{font-size:var(--fs-tiny);letter-spacing:.15em}
+.result-mock{text-align:center;padding:8px;background:var(--accent-light);color:var(--accent);font-size:var(--fs-tiny);font-weight:500}
+.result-quota{text-align:center;padding:8px;font-size:var(--fs-tiny);color:var(--text-tertiary)}
+.error-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:8px 24px;border-radius:var(--radius-md);font-size:var(--fs-small);font-weight:500;box-shadow:0 4px 16px rgba(158,42,43,.25);z-index:100;max-width:90%;text-align:center}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+</style></head><body>
+<div id="app">
+<header class="app-header"><div class="header-glow"></div><h1 class="header-title">非遗映象</h1><p class="header-subtitle">AI · 民族美学再生</p></header>
+<section class="section"><h2 class="section-title">上传肖像</h2>
+<div class="upload-zone" :class="{'upload-zone--filled':img}" @click="pick" @dragover.prevent @drop.prevent="drop">
+<input ref="fi" type="file" accept="image/*" @change="file"/>
+<template v-if="!img"><div class="upload-icon">🖼️</div><p class="upload-text">点击或拖拽上传照片</p><p class="upload-hint">支持 JPG / PNG，建议正面半身照</p></template>
+<template v-else><img :src="img" class="upload-preview"/><button class="upload-reset" @click.stop="reset">重新选择</button></template></div></section>
+<section class="section"><h2 class="section-title">选择风格</h2>
+<div class="style-grid"><button v-for="s in styles" :key="s.id" class="style-card" :class="{'style-card--active':sty===s.id}" @click="sty=s.id">
+<div class="style-card-visual" :style="{background:s.gradient}"><span class="style-card-emoji">{{s.emoji}}</span></div>
+<div class="style-card-info"><span class="style-card-name">{{s.label}}</span><span class="style-card-desc">{{s.desc}}</span></div>
+<div v-if="sty===s.id" class="style-card-check">✓</div></button></div></section>
+<button class="generate-btn" :class="st" :disabled="!ok" @click="gen">
+<template v-if="st==='idle'">✨ 生成非遗作品</template>
+<template v-else-if="st==='gen'"><span class="generate-loading"><span class="spinner"></span>意境融合中…</span></template>
+<template v-else-if="st==='done'">✨ 再次生成</template><template v-else>⚠️ 重试生成</template></button>
+<section v-if="res" class="section"><h2 class="section-title">生成结果</h2>
+<div class="result-card"><div class="result-image-wrap"><img :src="'data:image/png;base64,'+res.image" class="result-image"/>
+<div class="result-badge" :class="'badge--'+rk"><span class="badge-stars">{{rs}}</span><span class="badge-label">{{rl}}</span></div></div>
+<div v-if="res.mock" class="result-mock">🎭 演示模式 · 展示效果示意</div>
+<div v-if="res.quota_remaining!=null" class="result-quota">今日剩余次数：<strong>{{res.quota_remaining}}</strong></div></div></section>
+<div v-if="err" class="error-toast">{{err}}</div></div>
+<script>
+const{createApp,ref,computed}=Vue
+const S=[{id:'miao_silver',label:'苗银',desc:'银光璀璨 · 图腾华美',emoji:'👑',gradient:'linear-gradient(135deg,#e8e0d4,#f5f0e8 50%,#c8b898)'},{id:'court_dress',label:'清宫',desc:'凤冠霞帔 · 雍容华贵',emoji:'👘',gradient:'linear-gradient(135deg,#9e2a2b,#c14742 50%,#6a1e1f)'},{id:'dunhuang',label:'敦煌',desc:'飞天神韵 · 彩墨流芳',emoji:'🪷',gradient:'linear-gradient(135deg,#d4a853,#e8c66a 50%,#b88a3a)'}]
+const R={'清赏':{l:'清赏',s:'✦',k:'qing'},'珍赏':{l:'珍赏',s:'✦ ✦',k:'zhen'},'神品':{l:'神品',s:'✦ ✦ ✦',k:'shen'}}
+createApp({setup(){const fi=ref(null),img=ref(null),b64=ref(null),sty=ref('miao_silver'),st=ref('idle'),res=ref(null),err=ref('')
+const ok=computed(()=>b64.value&&st.value!=='gen')
+const rd=computed(()=>R[res.value?.rarity]||R['清赏']),rl=computed(()=>rd.value.l),rs=computed(()=>rd.value.s),rk=computed(()=>rd.value.k)
+function pick(){fi.value?.click()}
+function drop(e){const f=e.dataTransfer?.files?.[0];if(f)proc(f)}
+function file(e){const f=e.target.files?.[0];if(f)proc(f)}
+function proc(f){if(!f||!/^image\/(png|jpe?g)/.test(f.type)){err.value='请上传 JPG 或 PNG 格式';setTimeout(()=>err.value='',3000);return}
+st.value='idle';res.value=null;const r=new FileReader();r.onload=e=>{const d=e.target.result;b64.value=d.split(',')[1];img.value=d};r.readAsDataURL(f)}
+function reset(){img.value=null;b64.value=null;res.value=null;st.value='idle'}
+async function gen(){if(!ok.value)return;st.value='gen';err.value='';res.value=null
+try{const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:b64.value,style:sty.value,subject_type:'female',params:{density:'标准',pattern:'经典',finish:'温润'}})})
+if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||'请求失败')}
+res.value=await r.json();st.value='done'}catch(e){st.value='error';err.value=e.message||'生成失败';setTimeout(()=>err.value='',5000)}}
+return{fi,img,sty,st,res,err,ok,rl,rs,rk,styles:S,pick,drop,file,reset,gen}}}).mount('#app')
+</script></body></html>
