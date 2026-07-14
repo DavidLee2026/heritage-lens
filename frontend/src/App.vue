@@ -2,28 +2,61 @@
   <div class="app">
     <!-- ===== 全局头栏（所有视图共享） ===== -->
     <div class="app-header">
-      <HeaderBar />
-      <ResoBar />
+      <HeaderBar @about="aboutVisible = true" />
     </div>
 
     <!-- ===== 主视图 ===== -->
     <template v-if="store.viewState === 'main'">
+      <!-- 共鸣条：有收藏卡片后才显示 -->
+      <ResoBar v-if="store.gallery.length > 0" />
+
       <div class="main-view">
-        <StyleCarousel />
-        <UploadZone />
-        <StyleGrid />
+        <!-- ===== 引导区 ===== -->
+        <div class="hero-section">
+          <div class="hero-card">
+            <p class="hero-eyebrow">· 非遗映象 ·</p>
+            <h2 class="hero-title">上传照片，<br>AI 生成非遗艺术卡牌</h2>
+            <p class="hero-desc">千年技艺，一瞬再现。将你的照片转化为苗族银饰、敦煌壁画、清宫华服等非遗风格的收藏卡牌，每一张都是独一无二的文化印记。</p>
+            <button class="hero-cta" @click="scrollToUpload">
+              ✨ 开始创作
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== 上传区域 ===== -->
+        <div ref="uploadRef" id="uploadSection">
+          <UploadZone @uploaded="onImageUploaded" />
+        </div>
+
+        <!-- ===== 视觉分隔 ===== -->
+        <div class="section-divider">
+          <span class="sd-line"></span>
+          <span class="sd-dot">✦</span>
+          <span class="sd-line"></span>
+        </div>
+
+        <!-- ===== 风格选择区 ===== -->
+        <div class="style-section" :class="{ 'style-pulse': showStylePulse }" id="styleSection">
+          <div class="section-title">
+            选择非遗风格 <span class="section-label">点击一种，开启文化之旅</span>
+          </div>
+          <StyleCarousel />
+          <StyleGrid />
+        </div>
         <ParamControls />
         <RarityPreview />
 
         <!-- 生成按钮 -->
         <button
           class="btn-gen"
-          :class="store.generateState"
+          :class="[store.generateState, { 'btn-breathe': store.canGenerate && store.generateState === 'idle' }]"
           :disabled="!store.canGenerate"
           @click="handleGenerate"
         >
           <template v-if="store.generateState === 'idle'">
-            ✨ 生成非遗作品
+            <template v-if="!store.uploadImage">📸 先上传照片</template>
+            <template v-else-if="!store.selectedStyle">🎨 先选择风格</template>
+            <template v-else>✨ 生成非遗作品</template>
           </template>
           <template v-else-if="store.isGenerating">
             <span class="btn-loading">
@@ -49,12 +82,15 @@
     <!-- ===== 底部导航 ===== -->
     <NavBar />
 
-    <!-- ===== 错误提示 ===== -->
-    <transition name="fade">
-      <div v-if="store.errorMessage" class="error-toast">
-        {{ store.errorMessage }}
-      </div>
-    </transition>
+    <!-- ===== Toast 通知 ===== -->
+    <teleport to="body">
+      <transition name="toast-slide">
+        <div v-if="store.toastMessage" class="app-toast" :class="'toast-' + store.toastType">
+          <span class="toast-icon">{{ { success: '✅', error: '⚠️', info: '💡' }[store.toastType] }}</span>
+          {{ store.toastMessage }}
+        </div>
+      </transition>
+    </teleport>
 
     <!-- ===== 锻造动画叠加层 ===== -->
     <ForgeOverlay
@@ -79,6 +115,12 @@
       :level="upgradeLevel"
       @done="upgradeLevel = 0"
     />
+
+    <!-- ===== 关于弹窗 ===== -->
+    <AboutModal
+      :visible="aboutVisible"
+      @close="aboutVisible = false"
+    />
   </div>
 </template>
 
@@ -98,8 +140,30 @@ import ForgeOverlay from './components/ForgeOverlay.vue'
 import CardReveal from './components/CardReveal.vue'
 import GalleryView from './components/GalleryView.vue'
 import ToastNotice from './components/ToastNotice.vue'
+import AboutModal from './components/AboutModal.vue'
 
 const store = useGameStore()
+const aboutVisible = ref(false)
+
+/* ====== 引导区 ====== */
+const uploadRef = ref(null)
+const showStylePulse = ref(false)
+
+function scrollToUpload() {
+  const el = document.getElementById('uploadSection')
+  if (el) el.scrollIntoView({ behavior: 'smooth' })
+}
+
+function onImageUploaded() {
+  // 自动滚动到风格选择区
+  setTimeout(() => {
+    const el = document.getElementById('styleSection')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, 300)
+  // 呼吸动画提示
+  showStylePulse.value = true
+  setTimeout(() => { showStylePulse.value = false }, 4000)
+}
 
 /* ====== 叠加层状态 ====== */
 const showForge = ref(false)
@@ -161,7 +225,7 @@ function onViewCardFromGallery() {
 .app {
   max-width: 420px;
   margin: 0 auto;
-  padding: var(--space-md) var(--space-md) var(--space-xl);
+  padding: var(--space-md) var(--space-md) 76px;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -171,7 +235,115 @@ function onViewCardFromGallery() {
 .main-view {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-xl);
+}
+
+/* 引导区 */
+.hero-section {
+  padding: 4px 0 0;
+}
+.hero-card {
+  background: linear-gradient(135deg, var(--bg-elevated) 0%, #f7f0e6 100%);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 28px 20px 24px;
+  text-align: center;
+}
+.hero-eyebrow {
+  font-size: 11px;
+  color: var(--accent-gold);
+  font-weight: 500;
+  letter-spacing: 4px;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+.hero-title {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  margin: 0 0 12px;
+  line-height: 1.35;
+}
+.hero-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 20px;
+  max-width: 340px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.hero-cta {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), #b8432a);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 18px 24px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(142, 42, 43, 0.25);
+}
+.hero-cta:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(142, 42, 43, 0.15);
+}
+
+/* 视觉分隔 */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0;
+}
+.sd-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-primary), transparent);
+}
+.sd-dot {
+  font-size: 10px;
+  color: var(--border-primary);
+  line-height: 1;
+}
+
+/* 风格选择区 */
+.style-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* 上传后呼吸动画：提示"选一个风格" */
+.style-pulse {
+  animation: pulseHint 4s ease-in-out;
+}
+@keyframes pulseHint {
+  0%, 100% { opacity: 1; }
+  10% { opacity: 0.6; }
+  20% { opacity: 1; }
+  30% { opacity: 0.7; }
+  40% { opacity: 1; }
+  50% { opacity: 0.8; }
+  60% { opacity: 1; }
+  70%, 100% { opacity: 1; }
 }
 
 /* 生成按钮 */
@@ -194,6 +366,19 @@ function onViewCardFromGallery() {
   cursor: default;
   opacity: 0.5;
 }
+.btn-gen.btn-breathe {
+  animation: breatheGen 2.5s ease-in-out infinite;
+}
+@keyframes breatheGen {
+  0%, 100% {
+    box-shadow: 0 4px 14px rgba(142, 42, 43, 0.25);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 6px 24px rgba(142, 42, 43, 0.45);
+    transform: scale(1.02);
+  }
+}
 .btn-gen.error {
   background: linear-gradient(135deg, #b85450 0%, #9e2a2b 100%);
 }
@@ -215,30 +400,53 @@ function onViewCardFromGallery() {
   to { transform: rotate(360deg); }
 }
 
-/* 错误提示 */
-.error-toast {
+/* Toast 通知（三态：成功 / 错误 / 信息） */
+.app-toast {
   position: fixed;
-  bottom: 80px;
+  top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--accent);
-  color: #fff;
-  padding: 12px 24px;
+  padding: 10px 20px;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 300;
-  max-width: 90%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  z-index: 500;
+  max-width: 88%;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
 }
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s;
+.toast-icon { font-size: 16px; }
+.app-toast.toast-success {
+  background: rgba(56, 142, 60, 0.92);
+  color: #fff;
 }
-.fade-enter-from,
-.fade-leave-to {
+.app-toast.toast-error {
+  background: rgba(198, 40, 40, 0.92);
+  color: #fff;
+}
+.app-toast.toast-info {
+  background: rgba(66, 66, 66, 0.88);
+  color: #fff;
+}
+.toast-slide-enter-active {
+  transition: all 300ms ease-out;
+}
+.toast-slide-leave-active {
+  transition: all 250ms ease-in;
+}
+.toast-slide-enter-from {
   opacity: 0;
+  transform: translateX(-50%) translateY(-16px);
+}
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-16px);
 }
 .app-header {
   display: flex;

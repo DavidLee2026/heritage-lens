@@ -42,9 +42,21 @@ watch(
 
 <style scoped>
 .nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
   gap: 8px;
-  padding: 8px 0;
+  padding: 8px calc((100% - 420px) / 2 + 16px);
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-light);
+  z-index: 100;
+}
+@media (max-width: 420px) {
+  .nav-bar {
+    padding: 8px 16px;
+  }
 }
 .nav-btn {
   flex: 1;

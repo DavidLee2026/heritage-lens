@@ -88,7 +88,7 @@ def generate():
         payload = {
             "model": config.ARK_MODEL,
             "prompt": arp_prompt,
-            "images": [f"data:image/png;base64,{image_base64}"],
+            "image": f"data:image/png;base64,{image_base64}",
             "size": "1728x2304",
             "response_format": "b64_json",
             "watermark": False,
@@ -103,7 +103,7 @@ def generate():
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                resp = requests.post(config.ARK_ENDPOINT, headers=headers, json=payload, timeout=60)
+                resp = requests.post(config.ARK_ENDPOINT, headers=headers, json=payload, timeout=30)
                 result = resp.json()
                 if resp.status_code == 200 and result.get("data"):
                     image_result = result["data"][0].get("b64_json")

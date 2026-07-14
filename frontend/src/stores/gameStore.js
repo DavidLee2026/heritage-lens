@@ -68,7 +68,7 @@ export const useGameStore = defineStore('game', () => {
   ================================================================ */
   const uploadImage = ref(null)      // base64 data URL
   const imageBase64 = ref(null)      // raw base64 string (for API)
-  const selectedStyle = ref('miao_silver')
+  const selectedStyle = ref(null)
   const params = ref({ ...DEFAULT_PARAMS })
   const gallery = ref([])            // { style, rarity, image, prompt, time, resonance, id }
   const resonance = ref({})          // { styleId: { level, count } }
@@ -78,7 +78,24 @@ export const useGameStore = defineStore('game', () => {
   const isGenerating = ref(false)
   const generateProgress = ref(0)    // 0-100
   const generateState = ref('idle')  // idle | generating | done | error
-  const errorMessage = ref('')
+  const toastMessage = ref('')
+  const toastType = ref('error')   // 'success' | 'error' | 'info'
+  let toastTimer = null
+
+  function showToast(msg, type = 'info', duration = 3000) {
+    toastMessage.value = msg
+    toastType.value = type
+    if (toastTimer) clearTimeout(toastTimer)
+    toastTimer = setTimeout(() => {
+      toastMessage.value = ''
+    }, duration)
+  }
+
+  function clearToast() {
+    toastMessage.value = ''
+    if (toastTimer) clearTimeout(toastTimer)
+  }
+
   const viewState = ref('main')      // main | gallery | galleryDetail
   const detailStyleId = ref(null)
   const viewingStyleId = ref(null)   // for gallery card viewer
@@ -91,6 +108,7 @@ export const useGameStore = defineStore('game', () => {
   /** 当前风格的共鸣信息 */
   const currentResonance = computed(() => {
     const id = selectedStyle.value
+    if (!id) return { level: 0, count: 0 }
     if (!resonance.value[id]) {
       resonance.value[id] = { level: 0, count: 0 }
     }
@@ -98,7 +116,10 @@ export const useGameStore = defineStore('game', () => {
   })
 
   /** 当前风格的完整数据 */
-  const currentStyleData = computed(() => getStyleById(selectedStyle.value))
+  const currentStyleData = computed(() => {
+    if (!selectedStyle.value) return null
+    return getStyleById(selectedStyle.value)
+  })
 
   /** 偏离维数（参数偏离"标准"的个数） */
   const deviationCount = computed(() => {
@@ -126,7 +147,7 @@ export const useGameStore = defineStore('game', () => {
 
   /** 是否可以生成 */
   const canGenerate = computed(() => {
-    return uploadImage.value !== null && !isGenerating.value
+    return uploadImage.value !== null && selectedStyle.value !== null && !isGenerating.value
   })
 
   /** 图鉴有未读新卡 */
@@ -156,6 +177,7 @@ export const useGameStore = defineStore('game', () => {
   ================================================================ */
 
   function getStyleResonance(styleId) {
+    if (!styleId) return { level: 0, count: 0 }
     if (!resonance.value[styleId]) {
       resonance.value[styleId] = { level: 0, count: 0 }
     }
@@ -266,7 +288,6 @@ export const useGameStore = defineStore('game', () => {
 
     isGenerating.value = true
     generateState.value = 'generating'
-    errorMessage.value = ''
     generateProgress.value = 0
 
     // 1. 前端先掷稀有度
@@ -306,7 +327,7 @@ export const useGameStore = defineStore('game', () => {
     } catch (err) {
       console.warn('API 调用失败，使用 Mock 降级', err.message)
       mockUsed = true
-      errorMessage.value = err.message || '生成失败'
+      showToast(err.message || '网络波动，已用模拟效果展示', 'info', 5000)
     }
 
     // 2. 设置结果（即使 API 失败也能展示 Mock 卡牌）
@@ -458,6 +479,19 @@ export const useGameStore = defineStore('game', () => {
 
       if (saved.newCardCount) newCardCount.value = saved.newCardCount
       if (saved.pityCounter) pityCounter.value = saved.pityCounter
+
+      // 有图鉴数据时，自动选共鸣等级最高的风格，避免刷新后显示 Lv.0
+      if (gallery.value.length > 0 && !selectedStyle.value) {
+        let best = null
+        let bestLevel = -1
+        for (const [id, r] of Object.entries(resonance.value)) {
+          if (r.level > bestLevel || (r.level === bestLevel && r.count > (resonance.value[best]?.count || 0))) {
+            best = id
+            bestLevel = r.level
+          }
+        }
+        selectedStyle.value = best || gallery.value[0]?.style || null
+      }
     } catch (e) {
       console.warn('💾 IndexedDB 加载失败:', e)
     }
@@ -482,7 +516,8 @@ export const useGameStore = defineStore('game', () => {
     isGenerating,
     generateProgress,
     generateState,
-    errorMessage,
+    toastMessage,
+    toastType,
     viewState,
     detailStyleId,
     viewingStyleId,
@@ -508,6 +543,8 @@ export const useGameStore = defineStore('game', () => {
     resetGenerate,
     getStyleResonance,
     getResonanceProgress,
+    showToast,
+    clearToast,
     showMain,
     showGallery,
     showGalleryDetail,

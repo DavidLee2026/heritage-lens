@@ -6,6 +6,8 @@ import base64
 from pathlib import Path
 from dotenv import load_dotenv
 
+# 优先级：系统环境变量 > .env 文件
+# 生产部署应直接设置环境变量（export ARK_API_KEY=xxx），不依赖 .env 文件
 load_dotenv()
 
 ARK_API_KEY = os.environ.get("ARK_API_KEY", "")

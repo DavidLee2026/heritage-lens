@@ -1,6 +1,9 @@
 <template>
   <div class="resonance-bar">
-    <div class="level" :class="levelClass">{{ `Lv.${reso.level}` }}</div>
+    <div class="level" :class="levelClass">
+      <span class="level-num">Lv.{{ reso.level }}</span>
+      <span class="level-name">{{ levelNames[reso.level] }}</span>
+    </div>
     <div class="info">
       <div class="name">{{ styleData?.emoji }} {{ styleData?.name || '未知' }}</div>
       <div class="progress">{{ remainText }}</div>
@@ -16,6 +19,8 @@ import { computed } from 'vue'
 import { useGameStore } from '../stores/gameStore.js'
 
 const store = useGameStore()
+
+const levelNames = ['初识', '探访', '研习', '精进', '融汇', '传承']
 
 const reso = computed(() => store.currentResonance)
 const styleData = computed(() => store.currentStyleData)
@@ -38,10 +43,23 @@ const remainText = computed(() =>
   gap: 10px;
 }
 .level {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  gap: 0;
+}
+.level-num {
   font-size: 24px;
   font-weight: 800;
-  min-width: 36px;
   font-family: var(--font-display);
+  line-height: 1.1;
+}
+.level-name {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  opacity: 0.7;
 }
 .level.lv0 { color: var(--text-tertiary); }
 .level.lv1 { color: var(--silver, #e0d9ce); }

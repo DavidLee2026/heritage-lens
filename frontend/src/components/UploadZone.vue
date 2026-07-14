@@ -2,19 +2,28 @@
   <div
     class="upload-area"
     :class="{ 'has-img': store.uploadImage, dragover: dragOver }"
-    @click="triggerUpload"
     @dragover.prevent="dragOver = true"
     @dragleave="dragOver = false"
     @drop.prevent="handleDrop"
   >
     <template v-if="!store.uploadImage">
-      <span class="upload-icon">📸</span>
-      <div class="upload-label">上传你的照片</div>
-      <div class="upload-hint">点击选择照片 · 正面半身照效果最佳</div>
+      <!-- 两个选项 -->
+      <div class="upload-options">
+        <div class="upload-option" @click="triggerUpload">
+          <span class="uo-icon">📸</span>
+          <span class="uo-label">上传照片</span>
+          <span class="uo-hint">从相册选择</span>
+        </div>
+        <div class="upload-option" @click="loadSample">
+          <span class="uo-icon">🖼</span>
+          <span class="uo-label">使用样例</span>
+          <span class="uo-hint">试试效果</span>
+        </div>
+      </div>
     </template>
     <template v-else>
       <img :src="store.uploadImage" class="upload-preview" alt="预览" />
-      <div class="upload-status">✅ 已上传，选择风格继续</div>
+      <div class="upload-status">✅ 照片已就绪，选择风格开始生成</div>
     </template>
     <input
       ref="fileInput"
@@ -30,12 +39,41 @@
 import { ref } from 'vue'
 import { useGameStore } from '../stores/gameStore.js'
 
+const emit = defineEmits(['uploaded'])
 const store = useGameStore()
 const fileInput = ref(null)
 const dragOver = ref(false)
 
+const SAMPLE_COUNT = 3
+
+function randomSamplePath() {
+  const idx = Math.floor(Math.random() * SAMPLE_COUNT) + 1
+  return `/images/female/female_0${idx}.jpg`
+}
+
 function triggerUpload() {
   fileInput.value?.click()
+}
+
+function loadSample() {
+  store.resetGenerate()
+  const img = new Image()
+  img.crossOrigin = 'anonymous'
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = img.width
+    canvas.height = img.height
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
+    const base64 = dataUrl.split(',')[1]
+    store.setUploadImage(dataUrl, base64)
+    emit('uploaded')
+  }
+  img.onerror = () => {
+    store.showToast('样例图片加载失败，请尝试上传自己的照片', 'error')
+  }
+  img.src = randomSamplePath()
 }
 
 function handleDrop(e) {
@@ -51,8 +89,11 @@ function handleFile(e) {
 
 function processFile(file) {
   if (!file || !/^image\/(png|jpe?g)/.test(file.type)) {
-    store.errorMessage = '请上传 JPG 或 PNG 格式的图片'
-    setTimeout(() => (store.errorMessage = ''), 3000)
+    store.showToast('请上传 JPG 或 PNG 格式的图片', 'error')
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    store.showToast('图片超过 10MB 限制，请压缩后再试', 'error')
     return
   }
 
@@ -63,6 +104,8 @@ function processFile(file) {
     const data = ev.target.result
     const base64 = data.split(',')[1]
     store.setUploadImage(data, base64)
+    store.showToast('照片已加载 ✅ 选择风格开始生成', 'success')
+    emit('uploaded')
   }
   reader.readAsDataURL(file)
 }
@@ -73,14 +116,10 @@ function processFile(file) {
   background: var(--bg-elevated);
   border: 2px dashed var(--border-primary);
   border-radius: var(--radius-lg);
-  padding: 40px 20px;
+  padding: 24px 16px;
   text-align: center;
-  cursor: pointer;
+  cursor: default;
   transition: 0.2s;
-}
-.upload-area:hover {
-  border-color: var(--accent);
-  background: var(--accent-light);
 }
 .upload-area.dragover {
   border-color: var(--accent-gold);
@@ -91,10 +130,38 @@ function processFile(file) {
   padding: 12px;
   border-style: solid;
   border-color: var(--border-light);
+  cursor: pointer;
 }
-.upload-icon { font-size: 40px; display: block; margin-bottom: 8px; }
-.upload-label { font-weight: 600; margin-bottom: 4px; font-size: 14px; }
-.upload-hint { font-size: 12px; color: var(--text-secondary); }
+
+/* 两个选项 */
+.upload-options {
+  display: flex;
+  gap: 10px;
+}
+.upload-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 18px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-primary);
+  cursor: pointer;
+  transition: 0.2s;
+  background: var(--bg-primary);
+}
+.upload-option:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  transform: translateY(-1px);
+}
+.upload-option:active { transform: scale(0.97); }
+.uo-icon { font-size: 28px; }
+.uo-label { font-size: 14px; font-weight: 600; }
+.uo-hint { font-size: 11px; color: var(--text-secondary); }
+
+/* 预览态 */
 .upload-preview {
   width: 100%;
   max-height: 200px;

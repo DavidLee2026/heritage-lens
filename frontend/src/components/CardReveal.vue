@@ -651,17 +651,17 @@ watch(
 .face-back.qingshang {
   background: linear-gradient(180deg, #f5f0e8, #ede6dc);
   border: 1px solid #d4cdc2;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.03);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 6px 20px rgba(0,0,0,0.06);
 }
 .face-back.zhenshang {
   background: linear-gradient(180deg, #fcf6e6, #f7f0e0);
   border: 1px solid #d4c095;
-  box-shadow: 0 2px 6px rgba(168,134,42,0.08), 0 6px 14px rgba(168,134,42,0.05);
+  box-shadow: 0 2px 8px rgba(168,134,42,0.14), 0 8px 24px rgba(168,134,42,0.10);
 }
 .face-back.shenpin {
   background: linear-gradient(180deg, #faf3ea 0%, #f5ece2 30%, #f5eae8 70%, #faf0ea 100%);
-  border: 1.5px solid rgba(212,168,83,0.35);
-  box-shadow: 0 2px 8px rgba(212,168,83,0.12), 0 8px 24px rgba(212,168,83,0.08), 0 0 0 1.5px rgba(212,168,83,0.08);
+  border: 1.5px solid rgba(212,168,83,0.40);
+  box-shadow: 0 4px 12px rgba(212,168,83,0.18), 0 12px 32px rgba(212,168,83,0.12), 0 0 0 1px rgba(212,168,83,0.10);
 }
 /* ========== 背纹装饰（参考 卡牌翻转演示.html） ========== */
 .silver-ornament {
@@ -908,8 +908,10 @@ watch(
 /* ========== 其他 ========== */
 .card-hint {
   font-size: 12px;
-  color: var(--text-tertiary);
-  margin-top: 8px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  margin-bottom: 12px;
 }
 
 .prompt-display {

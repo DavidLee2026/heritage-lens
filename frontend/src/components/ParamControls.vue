@@ -1,57 +1,105 @@
 <template>
-  <div class="section">
-    <div class="section-title">
-      调参 · 选择你的视觉风格
-      <span class="section-tag">审美选择，非稀有度控制</span>
+  <div class="params-wrapper" :class="{ expanded: showParams }">
+    <!-- 折叠态：虚线框 -->
+    <div v-if="!showParams" class="params-folded" @click="showParams = true">
+      <span class="pf-icon">▸</span>
+      <span class="pf-label">调参 · 选择你的视觉风格</span>
     </div>
-    <div v-for="(p, i) in paramsConfig" :key="p.key" class="param-group">
-      <div class="param-label">
-        {{ p.label }}
-        <span class="param-value">{{ p.options[store.params[p.key]] }}</span>
+    <!-- 展开态：完整参数面板 -->
+    <template v-else>
+      <div class="params-header" @click="showParams = false">
+        <span class="pf-icon">▾</span>
+        <span class="pf-label">调参 · 选择你的视觉风格</span>
+        <span class="pf-hint">点击收起</span>
       </div>
-      <div class="param-dots">
-        <div
-          v-for="(opt, j) in p.options"
-          :key="j"
-          class="param-dot"
-          :class="{ active: store.params[p.key] === j }"
-          @click="store.setParam(i, j)"
-        >
-          {{ opt }}
+      <div v-for="(p, i) in paramsConfig" :key="p.key" class="param-group">
+        <div class="param-label">
+          {{ p.label }}
+          <span class="param-value">{{ p.options[store.params[p.key]] }}</span>
+        </div>
+        <div class="param-dots">
+          <div
+            v-for="(opt, j) in p.options"
+            :key="j"
+            class="param-dot"
+            :class="{ active: store.params[p.key] === j }"
+            @click="store.setParam(i, j)"
+          >
+            {{ opt }}
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useGameStore } from '../stores/gameStore.js'
 import { PARAMS } from '../data/constants.js'
 
 const store = useGameStore()
 const paramsConfig = PARAMS
+const showParams = ref(false)
 </script>
 
 <style scoped>
-.section {
+.params-wrapper {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.section-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-primary);
+
+/* 折叠态：虚线框（和生成按钮同尺寸） */
+.params-folded {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1.5px dashed var(--border-primary);
+  cursor: pointer;
+  transition: 0.2s;
+  user-select: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.params-folded:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.params-folded:active { transform: scale(0.98); }
+
+/* 展开态：标题行 */
+.params-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  cursor: pointer;
+  user-select: none;
+  padding: 0 2px;
 }
-.section-tag {
+.params-header:hover { opacity: 0.7; }
+.pf-icon {
+  font-size: 13px;
+  color: var(--accent);
+  line-height: 1;
+}
+.pf-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.pf-hint {
   font-size: 11px;
   color: var(--text-secondary);
   font-weight: 400;
+  margin-left: auto;
 }
+
+/* 参数组 */
 .param-group {
   background: var(--bg-elevated);
   border-radius: var(--radius-lg);
