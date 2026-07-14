@@ -18,8 +18,11 @@
             @mouseenter="tiltActive = true"
             @mouseleave="onTiltLeave"
             @click="flipCard"
+            @touchstart="onCardTouchStart"
+            @touchmove.prevent="onCardTouchMove"
+            @touchend="onCardTouchEnd"
           >
-            <div class="flip-box" :class="{ flipped: isFlipped }">
+            <div class="flip-box" :class="[rarityClass, { flipped: isFlipped }]">
               <!-- ========== 正面 ========== -->
               <div class="flip-face face-front" :class="rarityClass">
                 <div class="paper-texture"></div>
@@ -233,10 +236,99 @@ function bubbleClass(dimIdx) {
   return 'locked'
 }
 
-/* ========== 卡牌交互 ========== */
+/* ========== 卡牌交互（点击 + 手指滑动） ========== */
+// 滑动翻转的内部状态（不需要响应式）
+let swipeTouchStartX = 0
+let swipeDragged = false
+let swipeIsDragging = false
+let swipeAnimLock = false
+let swipeCurrentAngle = 0
+
+function getFlipBoxEl() {
+  return tiltRef.value?.querySelector('.flip-box') || null
+}
+
+/** 手指触摸开始 */
+function onCardTouchStart(e) {
+  if (swipeAnimLock) return
+  swipeDragged = false
+  swipeIsDragging = true
+  swipeTouchStartX = e.touches[0].clientX
+
+  const box = getFlipBoxEl()
+  if (box) {
+    box.classList.add('dragging')
+    const currentAngle = isFlipped.value ? 180 : 0
+    swipeCurrentAngle = currentAngle
+    box.style.transform = `rotateY(${currentAngle}deg) translateZ(50px)`
+    box.style.webkitTransform = `rotateY(${currentAngle}deg) translateZ(50px)`
+  }
+}
+
+/** 手指滑动中 — 跟手旋转 */
+function onCardTouchMove(e) {
+  if (!swipeIsDragging) return
+  e.preventDefault()
+  swipeDragged = true
+
+  const deltaX = e.touches[0].clientX - swipeTouchStartX
+  const baseAngle = isFlipped.value ? 180 : 0
+  const sensitivity = 180 / 120              // 滑 120px = 转 180°
+  let angle = baseAngle - deltaX * sensitivity
+  angle = Math.max(0, Math.min(180, angle))
+  swipeCurrentAngle = angle
+
+  const box = getFlipBoxEl()
+  if (box) {
+    box.style.transform = `rotateY(${angle}deg) translateZ(50px)`
+    box.style.webkitTransform = `rotateY(${angle}deg) translateZ(50px)`
+  }
+}
+
+/** 手指抬起 — 吸附到正面或背面 */
+function onCardTouchEnd(e) {
+  if (!swipeIsDragging) return
+  swipeIsDragging = false
+
+  const box = getFlipBoxEl()
+
+  if (swipeDragged) {
+    const deltaX = e.changedTouches[0].clientX - swipeTouchStartX
+    const fastSwipe = Math.abs(deltaX) > 50
+
+    // 判断吸附方向
+    let willShowBack
+    if (fastSwipe) {
+      // 快速滑动：左滑 → 背，右滑 → 正
+      willShowBack = deltaX < 0
+    } else {
+      // 慢速：靠哪面吸哪面（>90° → 背面）
+      willShowBack = swipeCurrentAngle >= 90
+    }
+
+    isFlipped.value = willShowBack
+
+    // 锁定动画期间，防止触摸干扰
+    swipeAnimLock = true
+    setTimeout(() => { swipeAnimLock = false }, 700)
+  }
+
+  // 清除 inline 样式 + dragging 类 → CSS transition 做缓动吸附
+  if (box) {
+    box.classList.remove('dragging')
+    box.style.transform = ''
+    box.style.webkitTransform = ''
+  }
+}
+
+/** 点击翻转（桌面端 / 没有滑动时） */
 function flipCard() {
+  // 如果手指刚滑过，跳过本次 click（touch → click 时序）
+  if (swipeDragged) {
+    swipeDragged = false
+    return
+  }
   isFlipped.value = !isFlipped.value
-  // 首次点击请求陀螺仪权限（iOS 13+）
   requestOrientationPermission()
 }
 
@@ -522,6 +614,7 @@ watch(
 
 /* ========== Card Scene ========== */
 .card-scene {
+  -webkit-perspective: 1000px;
   perspective: 1000px;
   margin: 16px auto;
   width: 210px;
@@ -536,23 +629,44 @@ watch(
 
 .tilt-wrapper {
   width: 100%;
+  -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
   transition: transform 200ms ease-out;
   will-change: transform;
   cursor: pointer;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
 }
 .flip-box {
   position: relative;
-  transition: transform 700ms cubic-bezier(0.23, 1, 0.32, 1);
+  -webkit-transform: translateZ(50px);
+  transform: translateZ(50px);
+  -webkit-transition: -webkit-transform 700ms cubic-bezier(0.23, 1, 0.32, 1);
+  transition: -webkit-transform 700ms cubic-bezier(0.23, 1, 0.32, 1),
+              transform 700ms cubic-bezier(0.23, 1, 0.32, 1);
+  -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
   cursor: pointer;
   border-radius: 10px;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
+  /* ⚠️ 注意：不在 flip-box 上设 overflow: hidden，否则 iOS Safari 会在 3D 旋转中裁剪掉一半卡片 */
 }
-.flip-box.flipped { transform: rotateY(180deg); }
+.flip-box.flipped {
+  -webkit-transform: rotateY(180deg) translateZ(50px);
+  transform: rotateY(180deg) translateZ(50px);
+}
+/* 拖拽中禁用 CSS 过渡，实现跟手旋转 */
+.flip-box.dragging {
+  -webkit-transition: none !important;
+  transition: none !important;
+}
+/* 卡牌投影 — 按稀有度 */
+.flip-box.qingshang {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.03);
+}
+.flip-box.zhenshang {
+  box-shadow: 0 2px 6px rgba(168,134,42,0.10), 0 6px 14px rgba(168,134,42,0.06);
+}
+.flip-box.shenpin {
+  box-shadow: 0 2px 8px rgba(212,168,83,0.15), 0 8px 24px rgba(212,168,83,0.10), 0 0 0 1px rgba(212,168,83,0.08);
+}
 
 .flip-face {
   backface-visibility: hidden;
@@ -570,17 +684,14 @@ watch(
 .face-front.qingshang {
   background: #fcf9f4;
   border: 1px solid #d4cdc2;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 .face-front.zhenshang {
   background: #fdfaf0;
   border: 1px solid #d4c095;
-  box-shadow: 0 2px 6px rgba(168, 134, 42, 0.10), 0 6px 14px rgba(168, 134, 42, 0.06);
 }
 .face-front.shenpin {
   background: #fcf5ec;
   border: 1.5px solid rgba(212, 168, 83, 0.35);
-  box-shadow: 0 2px 8px rgba(212, 168, 83, 0.15), 0 8px 24px rgba(212, 168, 83, 0.10), 0 0 0 1.5px rgba(212, 168, 83, 0.10);
 }
 
 /* 纸纹纹理 */
@@ -736,7 +847,8 @@ watch(
 .face-back {
   position: absolute;
   inset: 0;
-  transform: rotateY(180deg) translateZ(0);
+  -webkit-transform: rotateY(180deg);
+  transform: rotateY(180deg);
   padding: 20px 14px;
   display: flex;
   flex-direction: column;
@@ -746,17 +858,14 @@ watch(
 .face-back.qingshang {
   background: linear-gradient(180deg, #f5f0e8, #ede6dc);
   border: 1px solid #d4cdc2;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 6px 20px rgba(0,0,0,0.06);
 }
 .face-back.zhenshang {
   background: linear-gradient(180deg, #fcf6e6, #f7f0e0);
   border: 1px solid #d4c095;
-  box-shadow: 0 2px 8px rgba(168,134,42,0.14), 0 8px 24px rgba(168,134,42,0.10);
 }
 .face-back.shenpin {
   background: linear-gradient(180deg, #faf3ea 0%, #f5ece2 30%, #f5eae8 70%, #faf0ea 100%);
   border: 1.5px solid rgba(212,168,83,0.40);
-  box-shadow: 0 4px 12px rgba(212,168,83,0.18), 0 12px 32px rgba(212,168,83,0.12), 0 0 0 1px rgba(212,168,83,0.10);
 }
 /* ========== 背纹装饰（参考 卡牌翻转演示.html） ========== */
 .silver-ornament {
