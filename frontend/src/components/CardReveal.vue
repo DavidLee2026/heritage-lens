@@ -269,18 +269,8 @@ function flipCard() {
     box.style.transform = `rotateY(${angle}deg)`
     box.style.webkitTransform = `rotateY(${angle}deg)`
 
-    // 从 t=0.35 到 t=0.65 做渐变透明度过渡（卡牌在 60°-120° 区间两面都侧对用户）
-    if (t >= 0.35 && t < 0.65) {
-      const f = (t - 0.35) / 0.3  // 0→1
-      if (goingToBack) {
-        front.style.opacity = String(1 - f)
-        back.style.opacity = String(f)
-      } else {
-        front.style.opacity = String(f)
-        back.style.opacity = String(1 - f)
-      }
-    } else if (t >= 0.65) {
-      // 渐变结束，锁定目标面
+    // 在旋转中间点（t=0.5，容器正好 90°，两面皆侧对用户）瞬间切换透明度
+    if (t >= 0.5) {
       if (goingToBack) {
         front.style.opacity = '0'
         back.style.opacity = '1'
@@ -560,6 +550,8 @@ watch(
 
 /* ===== 两面共享 ===== */
 .flip-face {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   border-radius: 10px;
   width: 100%;
 }
@@ -574,6 +566,8 @@ watch(
 
 /* ===== 背面默认隐藏 ===== */
 .face-back {
+  -webkit-transform: rotateY(180deg);
+  transform: rotateY(180deg);
   opacity: 0;
 }
 .face-front.qingshang {
