@@ -395,6 +395,18 @@ export const useGameStore = defineStore('game', () => {
     saveState()
   }
 
+  /** 从图鉴删除当前查看的卡片 */
+  function deleteCurrentFromGallery() {
+    const cur = currentResult.value
+    if (!cur || !cur.image) return false
+    const idx = gallery.value.findIndex((g) => g.image === cur.image)
+    if (idx === -1) return false
+    gallery.value.splice(idx, 1)
+    currentResult.value = null
+    saveState()
+    return true
+  }
+
   /* ================================================================
      持久化（IndexedDB）
   ================================================================ */
@@ -403,12 +415,13 @@ export const useGameStore = defineStore('game', () => {
 
   /** 保存到 IndexedDB（异步，不阻塞 UI） */
   function saveState() {
-    dbSet(STATE_KEY, {
+    // JSON 脱壳：去掉 Vue reactive proxy，否则 IndexedDB 结构化克隆会失败
+    dbSet(STATE_KEY, JSON.parse(JSON.stringify({
       gallery: gallery.value,
       resonance: resonance.value,
       newCardCount: newCardCount.value,
       pityCounter: pityCounter.value,
-    }).catch((e) => {
+    }))).catch((e) => {
       console.warn('💾 IndexedDB 保存失败:', e)
     })
   }
@@ -501,6 +514,7 @@ export const useGameStore = defineStore('game', () => {
     showGalleryCard,
     closeGalleryCard,
     clearGalleryData,
+    deleteCurrentFromGallery,
     saveState,
     loadState,
 

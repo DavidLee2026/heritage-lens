@@ -79,11 +79,17 @@
                 </div>
               </div>
 
-              <!-- ========== 背面 ========== -->
+              <!-- ========== 背面（左对齐 + 窄 banner + 标题在 banner 下） ========== -->
               <div class="flip-face face-back" :class="rarityClass">
                 <div class="paper-texture"></div>
-                <div class="back-seal">非<br />遗</div>
-                <div class="back-rarity" :class="rarityClass">{{ backContent.rarity }}</div>
+                <div class="silver-ornament">
+                  <template v-if="rarityClass === 'shenpin'"><div></div><div></div></template>
+                </div>
+                <div class="back-seal"><span>非</span><span>遗</span></div>
+                <span class="back-rarity" :class="rarityClass">{{ backContent.rarity }}</span>
+                <div class="back-banner" v-if="bannerImage">
+                  <img :src="bannerImage" class="banner-img" />
+                </div>
                 <div class="back-title" v-text="backContent.title"></div>
                 <div class="back-desc" v-text="backContent.desc"></div>
                 <div class="back-source" v-text="backContent.source"></div>
@@ -118,7 +124,7 @@
         <div v-else class="result-actions">
           <button :disabled="submitting" @click="downloadCard">💾 下载</button>
           <button :disabled="submitting" @click="shareCard">📤 分享</button>
-          <button class="primary" :disabled="submitting" @click="$emit('close')">← 返回</button>
+          <button :disabled="submitting" @click="deleteCard">🗑️ 删除</button>
         </div>
       </div>
     </div>
@@ -174,6 +180,17 @@ const cardImage = computed(() => {
 const cardStyleLabel = computed(() => {
   if (!styleData.value) return ''
   return `${styleData.value.name} · ${styleData.value.heritage}`
+})
+
+/** 背面窄 banner 图片映射 */
+const BANNER_IMG = {
+  miao_silver: '/images/苗族_古典_横版.jpg',
+  court_dress: '/images/清宫华服_古典_横版.jpg',
+  dunhuang: '/images/敦煌_艺术_横版.jpg',
+}
+const bannerImage = computed(() => {
+  const sid = result.value?.style || store.selectedStyle
+  return BANNER_IMG[sid] || ''
 })
 const resonanceLevel = computed(() => {
   const reso = store.getStyleResonance(result.value?.style || store.selectedStyle)
@@ -269,20 +286,22 @@ function collectAndRegen() {
   emit('regen')
 }
 
+function deleteCard() {
+  store.deleteCurrentFromGallery()
+  emit('close')
+}
+
 /** 捕获卡面为图片 blob */
 function captureCardBlob() {
   return new Promise((resolve) => {
-    const faceId = isFlipped.value ? 'faceBack' : 'faceFront'
-    const source = tiltRef.value?.querySelector(`.${faceId}`)
+    const source = tiltRef.value?.querySelector('.flip-box')
     if (!source) {
       resolve(null)
       return
     }
-    const w = source.offsetWidth || 210
-    const h = source.offsetHeight || 280
 
     if (typeof html2canvas !== 'undefined') {
-      html2canvas(source, { scale: 2, useCORS: true, backgroundColor: null })
+      html2canvas(source, { scale: 2, useCORS: false, backgroundColor: null, allowTaint: true })
         .then((canvas) => canvas.toBlob((b) => resolve(b), 'image/png'))
         .catch(() => fallback())
     } else {
@@ -290,26 +309,13 @@ function captureCardBlob() {
     }
 
     function fallback() {
-      const canvas = document.createElement('canvas')
-      canvas.width = w * 2
-      canvas.height = h * 2
-      const ctx = canvas.getContext('2d')
-      ctx.scale(2, 2)
-      ctx.fillStyle = '#fcf9f4'
-      ctx.fillRect(0, 0, w, h)
-      const title = source.querySelector('.card-style-name')
-      const lv = source.querySelector('.card-resonance')
-      if (title) {
-        ctx.fillStyle = '#1e2b38'
-        ctx.font = '14px sans-serif'
-        ctx.fillText(title.textContent, 16, h - 40)
-      }
-      if (lv) {
-        ctx.fillStyle = '#8a8580'
-        ctx.font = '12px sans-serif'
-        ctx.fillText(lv.textContent, 16, h - 16)
-      }
-      canvas.toBlob((b) => resolve(b), 'image/png')
+      // 直接下载卡面图片（不含稀有度栏和底栏）
+      const imgSrc = cardImage.value
+      if (!imgSrc) { resolve(null); return }
+      fetch(imgSrc)
+        .then((r) => r.blob())
+        .then((b) => resolve(b))
+        .catch(() => resolve(null))
     }
   })
 }
@@ -426,7 +432,6 @@ watch(
   perspective: 1000px;
   margin: 16px auto;
   width: 210px;
-  height: 280px;
 }
 .card-scene.card-reveal {
   animation: cardReveal 500ms cubic-bezier(0.23, 1, 0.32, 1) both;
@@ -438,35 +443,30 @@ watch(
 
 .tilt-wrapper {
   width: 100%;
-  height: 100%;
   transform-style: preserve-3d;
   transition: transform 200ms ease-out;
   will-change: transform;
   cursor: pointer;
 }
 .flip-box {
-  width: 100%;
-  height: 100%;
   position: relative;
   transition: transform 700ms cubic-bezier(0.23, 1, 0.32, 1);
   transform-style: preserve-3d;
   cursor: pointer;
+  border-radius: 10px;
 }
 .flip-box.flipped { transform: rotateY(180deg); }
 
 .flip-face {
-  position: absolute;
-  width: 100%;
-  height: 100%;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   border-radius: 10px;
+  width: 100%;
 }
 
-/* ========== Front Face ========== */
+/* ========== Front Face (正常流撑高 flip-box) ========== */
 .face-front {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   border-radius: 10px;
   overflow: hidden;
 }
@@ -502,8 +502,8 @@ watch(
 
 /* 稀有度栏 */
 .rarity-bar {
-  padding: 10px 14px;
-  font-size: 16px;
+  padding: 6px 10px;
+  font-size: 12px;
   font-weight: 700;
   display: flex;
   justify-content: space-between;
@@ -525,7 +525,7 @@ watch(
   background: linear-gradient(135deg, #f5e6e0 0%, #f5e6d8 30%, #f8edd0 60%, #f5e6e0 100%);
   color: #8e2a2b;
   border-bottom: 1px solid #e8d4c0;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  text-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.4);
   position: relative;
   overflow: hidden;
 }
@@ -559,31 +559,34 @@ watch(
 
 /* 卡牌图片区 */
 .card-img {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 133.33%; /* 3:4 — 图片区域独立保持比例 */
   overflow: hidden;
   z-index: 1;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06); /* 方案B · 内嵌凹槽 */
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 .face-front.qingshang .card-img { background: #f7f4ee; }
 .face-front.zhenshang .card-img { background: linear-gradient(180deg, #fdfaf0 0%, #f8f2e4 50%, #faf4e8 100%); }
 .face-front.shenpin .card-img { background: linear-gradient(180deg, #fef9f0 0%, #faf3e8 30%, #f5ebe4 70%, #fcf4ee 100%); }
 
 .card-real-img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  position: relative;
   z-index: 1;
 }
 
 .card-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   font-size: 64px;
   color: var(--text-tertiary);
-  position: relative;
   z-index: 1;
 }
 
@@ -606,7 +609,7 @@ watch(
 
 /* 卡牌底栏 */
 .card-footer {
-  padding: 8px 12px;
+  padding: 6px 10px;
   display: flex;
   justify-content: space-between;
   position: relative;
@@ -625,7 +628,7 @@ watch(
   background: linear-gradient(180deg, #fef9f0, #f8eee4);
   border-top: 1px solid #e8d4c0;
 }
-.card-style-name { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+.card-style-name { font-weight: 600; font-size: 12px; color: var(--text-primary); }
 .face-front.qingshang .card-style-name { color: #7a7570; }
 .face-front.zhenshang .card-style-name { color: #9a7e28; }
 .face-front.shenpin .card-style-name { color: #8e2a2b; }
@@ -634,25 +637,102 @@ watch(
 
 /* ========== Back Face ========== */
 .face-back {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
   transform: rotateY(180deg);
-  padding: 20px 16px;
+  padding: 20px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  position: relative;
   overflow: hidden;
 }
 .face-back.qingshang {
   background: linear-gradient(180deg, #f5f0e8, #ede6dc);
   border: 1px solid #d4cdc2;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.03);
 }
 .face-back.zhenshang {
   background: linear-gradient(180deg, #fcf6e6, #f7f0e0);
-  border: 1px solid #d4c8a8;
+  border: 1px solid #d4c095;
+  box-shadow: 0 2px 6px rgba(168,134,42,0.08), 0 6px 14px rgba(168,134,42,0.05);
 }
 .face-back.shenpin {
-  background: linear-gradient(180deg, #faf3ea, #f5ece2, #faf0ea);
-  border: 1.5px solid rgba(212, 168, 83, 0.25);
+  background: linear-gradient(180deg, #faf3ea 0%, #f5ece2 30%, #f5eae8 70%, #faf0ea 100%);
+  border: 1.5px solid rgba(212,168,83,0.35);
+  box-shadow: 0 2px 8px rgba(212,168,83,0.12), 0 8px 24px rgba(212,168,83,0.08), 0 0 0 1.5px rgba(212,168,83,0.08);
+}
+/* ========== 背纹装饰（参考 卡牌翻转演示.html） ========== */
+.silver-ornament {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 1;
+}
+/* 清赏：菱形点阵银纹 */
+.face-back.qingshang .silver-ornament {
+  background:
+    repeating-linear-gradient(45deg, transparent, transparent 16px, rgba(180,170,158,0.12) 16px, rgba(180,170,158,0.12) 17px),
+    repeating-linear-gradient(-45deg, transparent, transparent 16px, rgba(180,170,158,0.12) 16px, rgba(180,170,158,0.12) 17px);
+}
+.face-back.qingshang .silver-ornament::before {
+  content: ''; position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 60px; height: 60px;
+  border: 1px solid rgba(180,170,158,0.08);
+  border-radius: 50%;
+}
+/* 珍赏：卷草金纹 */
+.face-back.zhenshang .silver-ornament {
+  background:
+    radial-gradient(circle at 25% 30%, rgba(212,168,83,0.05) 0%, transparent 40%),
+    radial-gradient(circle at 75% 70%, rgba(212,168,83,0.05) 0%, transparent 40%);
+}
+.face-back.zhenshang .silver-ornament::before {
+  content: ''; position: absolute;
+  top: 18%; left: 8%;
+  width: 84%; height: 56%;
+  border: 1.5px solid rgba(212,168,83,0.09);
+  border-radius: 38% 62% 42% 58%;
+  transform: rotate(12deg);
+}
+.face-back.zhenshang .silver-ornament::after {
+  content: ''; position: absolute;
+  top: 26%; left: 18%;
+  width: 64%; height: 40%;
+  border: 1px solid rgba(212,168,83,0.13);
+  border-radius: 55% 45% 48% 52%;
+  transform: rotate(-8deg);
+  box-shadow: 0 0 24px rgba(212,168,83,0.05), inset 0 0 24px rgba(212,168,83,0.04);
+}
+/* 神品：同心金纹 + 光芒 */
+.face-back.shenpin .silver-ornament {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(212,168,83,0.05) 0%, transparent 45%),
+    radial-gradient(circle at 70% 80%, rgba(248,220,140,0.04) 0%, transparent 40%);
+}
+.face-back.shenpin .silver-ornament::before {
+  content: ''; position: absolute;
+  top: 12%; left: 4%;
+  width: 92%; height: 68%;
+  border: 1.5px solid rgba(212,168,83,0.10);
+  border-radius: 42% 58% 48% 52%;
+  box-shadow: 0 0 20px rgba(212,168,83,0.04), inset 0 0 30px rgba(212,168,83,0.03);
+}
+.face-back.shenpin .silver-ornament > div:first-child {
+  position: absolute;
+  top: 22%; left: 14%;
+  width: 72%; height: 52%;
+  border: 2px solid rgba(212,168,83,0.09);
+  border-radius: 55% 45% 50% 50%;
+}
+.face-back.shenpin .silver-ornament > div:last-child {
+  position: absolute;
+  top: 32%; left: 28%;
+  width: 44%; height: 30%;
+  border: 1px solid rgba(212,168,83,0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(212,168,83,0.06) 0%, transparent 60%);
 }
 .back-rarity {
   display: inline-block;
@@ -673,43 +753,63 @@ watch(
   font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.35;
+  line-height: 1.4;
+  text-align: left;
+  margin-top: 4px;
   position: relative;
   z-index: 5;
+}
+.back-banner {
+  width: 100%;
+  height: 0;
+  padding-bottom: 28%;
+  overflow: hidden;
+  border-radius: 4px;
+  margin: 4px 0;
+  position: relative;
+  z-index: 5;
+}
+.back-banner .banner-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .back-desc {
   font-size: 12px;
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.5;
+  text-align: left;
   flex: 1;
-  display: flex;
-  align-items: center;
   position: relative;
   z-index: 5;
 }
 .back-source {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-tertiary);
+  text-align: left;
   margin-top: auto;
+  padding-top: 4px;
   position: relative;
   z-index: 5;
 }
 
 .back-seal {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 36px;
-  height: 36px;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: #9e2a2b;
-  border: 1px solid #d4a853;
+  border: 1px solid var(--accent-gold, #d4a853);
   padding: 2px; /* 内缩留白 */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-family: 'Noto Serif TC', serif;
+  font-family: var(--font-display);
   font-size: 12px;
   font-weight: 700;
   color: #fff;

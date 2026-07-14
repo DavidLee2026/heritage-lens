@@ -29,9 +29,9 @@
           :style="{ '--idx': styleIndex(sid) }"
           @click="openDetail(sid)"
         >
-          <div class="gi-img" :style="{ background: tileBg(items) }">
+          <div class="gi-img" :class="'bg-' + sid" :style="{ background: tileBg(items) }">
+            <div class="gi-img-bg" :class="'bg-' + sid"></div>
             <div class="gi-paper"></div>
-            <span class="gi-emoji">{{ styleEmoji(items) }}</span>
             <div class="gi-rarity-bar" :style="{ background: bestColor(items) }"></div>
           </div>
           <div class="gi-info">
@@ -47,7 +47,7 @@
       </div>
     </div>
 
-    <!-- ===== 详情：某风格全部卡片（3:4 缩略） ===== -->
+    <!-- ===== 详情：某风格全部卡片（设计规范 2.1） ===== -->
     <div v-else>
       <div class="gallery-header">
         <button class="gallery-back" @click="store.detailStyleId = null">← 返回</button>
@@ -60,24 +60,26 @@
           v-for="(card, i) in store.detailCards"
           :key="card.id || i"
           class="detail-card"
-          :style="{ '--idx': i, borderTop: `3px solid ${rarityColor(card.rarity)}` }"
+          :class="RARITY_CLASS[card.rarity]"
+          :style="{ '--idx': i }"
           @click="openCard(card, store.detailStyleId, i)"
         >
-          <div class="dc-img">
-            <div class="dc-paper"></div>
+          <div class="rarity-bar" :class="RARITY_CLASS[card.rarity]">
+            <span class="rarity-label">{{ RARITY_NAMES[card.rarity] || '清赏 ✦' }}</span>
+            <span class="style-emoji">{{ styleEmojiOf(card.style) }}</span>
+          </div>
+          <div class="card-img">
+            <div class="quality-glow" :class="RARITY_CLASS[card.rarity]"></div>
             <img
               v-if="card.image"
               :src="card.image.startsWith('data:') ? card.image : 'data:image/png;base64,' + card.image"
-              class="dc-real-img"
+              class="card-real-img"
             />
-            <span v-else class="dc-placeholder">{{ styleEmojiOf(store.detailStyleId) }}</span>
-            <span class="dc-index">#{{ i + 1 }}</span>
-            <div class="dc-rarity-tag" :style="{ background: rarityColor(card.rarity) }">
-              {{ rarityAbbr(card.rarity) }}
-            </div>
+            <span v-else class="card-placeholder">{{ styleEmojiOf(card.style) }}</span>
           </div>
-          <div class="dc-footer">
-            <span class="dc-resonance">共鸣 Lv.{{ card.resonance ?? 0 }}</span>
+          <div class="card-footer">
+            <span class="card-style-name">{{ styleNameOf(card.style) }}</span>
+            <span class="card-resonance">共鸣 Lv.{{ card.resonance ?? 0 }}</span>
           </div>
         </div>
       </div>
@@ -104,19 +106,13 @@ import {
   RARITY_ABBR,
   RARITY_COLORS,
   RARITY_NAMES,
+  RARITY_CLASS,
 } from '../data/constants.js'
 import ConfirmModal from './ConfirmModal.vue'
 
 const store = useGameStore()
 const emit = defineEmits(['viewCard'])
 const showClearModal = ref(false)
-
-function rarityColor(rarity) {
-  return RARITY_COLORS[rarity] || '#8a8580'
-}
-function rarityAbbr(rarity) {
-  return RARITY_ABBR[rarity] || '清赏'
-}
 
 const countLabel = computed(() => {
   const styleCount = store.galleryStyleCount
@@ -140,15 +136,12 @@ function bestRarity(items) {
   return Math.max(...items.map((i) => i.rarity))
 }
 function bestColor(items) {
-  return rarityColor(bestRarity(items))
+  const r = bestRarity(items)
+  return RARITY_COLORS[r] || '#8a8580'
 }
 function bestLabel(items) {
   const r = bestRarity(items)
   return RARITY_ABBR[r] || '清赏'
-}
-function styleEmoji(items) {
-  const style = getStyleById(items[0]?.style)
-  return style?.emoji || '🏮'
 }
 function styleName(items) {
   const style = getStyleById(items[0]?.style)
@@ -157,6 +150,15 @@ function styleName(items) {
 function styleEmojiOf(styleId) {
   const style = getStyleById(styleId)
   return style?.emoji || '🏮'
+}
+function styleNameOf(styleId) {
+  const style = getStyleById(styleId)
+  return style?.name || '未知'
+}
+function styleFullLabel(styleId) {
+  const style = getStyleById(styleId)
+  if (!style) return '未知'
+  return `${style.name} · ${style.heritage}`
 }
 function tileBg(items) {
   const style = getStyleById(items[0]?.style)
@@ -274,7 +276,17 @@ function onClearConfirm() {
   mix-blend-mode: multiply;
   pointer-events: none;
 }
-.gi-emoji { position: relative; z-index: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15)); }
+.gi-img-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+  opacity: 0.5;
+}
+.gi-img-bg.bg-miao_silver { background-image: url('/images/苗族_古典_竖版.jpg'); }
+.gi-img-bg.bg-court_dress { background-image: url('/images/清宫华服_古典_竖版.jpg'); }
+.gi-img-bg.bg-dunhuang { background-image: url('/images/敦煌_艺术_竖版.jpg'); }
 .gi-rarity-bar {
   position: absolute;
   bottom: 0; left: 0; right: 0;
@@ -329,24 +341,41 @@ function onClearConfirm() {
   color: var(--text-tertiary);
 }
 
-/* ====== 详情网格（3:4 卡片） ====== */
+/* ====== 详情网格（3:4 卡片，与 CardReveal 正面一致） ====== */
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+
+/* --- 卡片容器（面对应 face-front） --- */
 .detail-card {
-  background: var(--bg-elevated);
-  border-radius: var(--radius-lg);
+  position: relative;
+  border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
   animation: cardEnter 400ms var(--ease-out) both;
   animation-delay: calc(var(--idx, 0) * 50ms);
 }
+.detail-card.qingshang {
+  background: #fcf9f4;
+  border: 1px solid #d4cdc2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+.detail-card.zhenshang {
+  background: #fdfaf0;
+  border: 1px solid #d4c095;
+  box-shadow: 0 2px 6px rgba(168, 134, 42, 0.10), 0 6px 14px rgba(168, 134, 42, 0.06);
+}
+.detail-card.shenpin {
+  background: #fcf5ec;
+  border: 1.5px solid rgba(212, 168, 83, 0.35);
+  box-shadow: 0 2px 8px rgba(212, 168, 83, 0.15), 0 8px 24px rgba(212, 168, 83, 0.10), 0 0 0 1.5px rgba(212, 168, 83, 0.10);
+}
 .detail-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 .detail-card:active { transform: scale(0.97); }
 @keyframes cardEnter {
@@ -354,70 +383,109 @@ function onClearConfirm() {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.dc-img {
-  aspect-ratio: 3/4;
+/* --- 纸纹纹理 --- */
+.detail-card .paper-texture { display: none; }
+
+/* --- 稀有度栏（精简版） --- */
+.detail-card .rarity-bar {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   position: relative;
-  overflow: hidden;
-  background: var(--silver);
+  z-index: 2;
 }
-.dc-paper {
+.detail-card .rarity-bar.qingshang {
+  background: linear-gradient(180deg, #e5dfd5, #dcd4c8);
+  color: #7a7570;
+  border-bottom: 1px solid #d0c8bc;
+}
+.detail-card .rarity-bar.zhenshang {
+  background: linear-gradient(180deg, #faf1d0, #f3e6be);
+  color: #9a7e28;
+  border-bottom: 1px solid #e8d8a8;
+}
+.detail-card .rarity-bar.shenpin {
+  background: linear-gradient(135deg, #f5e6e0 0%, #f5e6d8 30%, #f8edd0 60%, #f5e6e0 100%);
+  color: #8e2a2b;
+  border-bottom: 1px solid #e8d4c0;
+}
+
+/* --- 卡牌图片区（3:4） --- */
+.detail-card .card-img {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 133.33%;
+  overflow: hidden;
+  z-index: 1;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.detail-card.qingshang .card-img { background: #f7f4ee; }
+.detail-card.zhenshang .card-img { background: linear-gradient(180deg, #fdfaf0 0%, #f8f2e4 50%, #faf4e8 100%); }
+.detail-card.shenpin .card-img { background: linear-gradient(180deg, #fef9f0 0%, #faf3e8 30%, #f5ebe4 70%, #fcf4ee 100%); }
+
+.detail-card .card-real-img {
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-  background-size: 400px 400px;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  z-index: 1;
-}
-.dc-real-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  position: relative;
-  z-index: 2;
+  z-index: 1;
 }
-.dc-placeholder {
+.detail-card .card-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   font-size: 36px;
-  position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
-}
-.dc-index {
-  position: absolute;
-  bottom: 6px;
-  left: 6px;
-  background: rgba(0,0,0,0.5);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 6px;
-  z-index: 3;
-}
-.dc-rarity-tag {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  z-index: 3;
-  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  z-index: 1;
 }
 
-.dc-footer {
-  padding: 8px 10px;
+/* --- 品质辉光 --- */
+.detail-card .quality-glow {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+.detail-card.qingshang .quality-glow { display: none; }
+.detail-card.zhenshang .quality-glow {
+  background: radial-gradient(ellipse at 50% 30%, rgba(212,168,83,0.04) 0%, transparent 60%);
+}
+.detail-card.shenpin .quality-glow {
+  background:
+    radial-gradient(ellipse at 40% 30%, rgba(212,168,83,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 60%, rgba(158,42,43,0.03) 0%, transparent 40%);
+}
+
+/* --- 卡牌底栏（精简版） --- */
+.detail-card .card-footer {
+  padding: 6px 10px;
   display: flex;
-  justify-content: flex-end;
-  border-top: 1px solid var(--border-light);
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
 }
-.dc-resonance {
-  font-size: 10px;
-  color: var(--text-tertiary);
+.detail-card.qingshang .card-footer {
+  background: #f7f4ee;
+  border-top: 1px solid #e0dad0;
 }
+.detail-card.zhenshang .card-footer {
+  background: #fdfaf0;
+  border-top: 1px solid #ece0c4;
+}
+.detail-card.shenpin .card-footer {
+  background: #fef9f0;
+  border-top: 1px solid #e8d4c0;
+}
+.detail-card .card-style-name { font-weight: 600; font-size: 12px; color: var(--text-primary); }
+.detail-card.qingshang .card-style-name { color: #7a7570; }
+.detail-card.zhenshang .card-style-name { color: #9a7e28; }
+.detail-card.shenpin .card-style-name { color: #8e2a2b; }
+.detail-card .card-resonance { color: var(--text-secondary); font-size: 12px; }
+.detail-card.zhenshang .card-resonance { color: #b8a46a; }
 </style>

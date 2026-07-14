@@ -1,1 +1,266 @@
-# heritage-lens
+# Heritage Lens · 非遗映象
+
+> **TRAE AI 创造力大赛** — 公益赛道 · 非遗创新创意产品开发
+>
+> 用 AI 为传统文化注入新生。上传照片，AI 自动识别并生成极具质感的非遗风格艺术卡牌，在收藏与升级中感受文化之美。
+
+---
+
+## ✨ 核心功能
+
+| 功能 | 说明 |
+|:-----|:------|
+| **多风格非遗换装** | 苗族银饰、清宫华服、敦煌艺术、唐代风貌等多种风格一键切换 |
+| **AI 智能生成** | 上传人像照，AI 自动保持面部特征并融入非遗文化元素 |
+| **参数精调** | 可微调生成强度、艺术化程度、细节保留等参数 |
+| **共鸣成长系统** | 连续生成同一风格提升共鸣等级，解锁更优质生成结果 |
+| **稀有度分级** | 清赏 → 珍赏 → 神品，三档品质随机产出，含保底机制 |
+| **卡牌收藏图鉴** | 所有生成卡片自动归档，支持详情查看、翻牌展示、删除管理 |
+| **本地持久化** | 收藏数据通过 IndexedDB 持久化存储，刷新不丢失 |
+| **卡片下载** | 支持将卡牌截图为图片保存到本地 |
+
+---
+
+## 🏗 AI 技术架构
+
+### 数据流
+
+```
+上传照片 → Base64 编码 → 图像预处理（尺寸校验 ≤10MB）
+    ↓
+前端组装参数化提示词（风格 × 参数 × 背景 × 品质）
+    ↓
+后端 API 调用（图生图模式，1728×2304 输出）
+    ↓ 成功          ↓ 失败降级
+Base64 解码渲染     Mock 演示图展示（标注 mock 标识）
+    ↓
+用户确认 → 收入图鉴（IndexedDB） → 共鸣经验结算
+```
+
+### 提示词工程系统
+
+提示词分四层参数化组合：
+
+```
+[风格层] 描述服饰、纹理、材质等核心风格特征
+[参数层] 生成强度、细节保留、艺术化程度
+[背景层] 背景环境氛围描述
+[品质层] 根据稀有度等级附加品质修饰词
+```
+
+每层都有预设变体，前端运行时动态拼接。支持 `prompts.json` 外部配置，无需改代码即可调整提示词。
+
+### 降级与容错
+
+- API 调用设 3 次重试（指数退避 2s → 4s）
+- 所有异常都降级到本地 Mock 演示图
+- 降级响应标注 `mock: true`，前端可见
+- 免费额度上限可配置，超额后自动全量降级
+
+---
+
+## 🛠 技术栈
+
+| 层 | 技术 | 用途 |
+|:---|:-----|:------|
+| 前端框架 | Vue 3 (Composition API) | 组件化界面 |
+| 状态管理 | Pinia | 全局游戏状态 (共鸣、图鉴、UI 状态) |
+| 构建工具 | Vite | 开发服务器与生产构建 |
+| 后端 | Flask (Python) | API 代理与图片生成调度 |
+| 图片生成 | LLM API (图生图) | 风格化卡牌生成 |
+| 数据持久化 | IndexedDB | 本地收藏数据存储 |
+| 卡牌导出 | html2canvas | DOM 截图下载 |
+
+---
+
+## 📁 项目结构
+
+```
+heritage-lens/
+├── README.md                    # 项目文档
+├── .gitignore
+├── .env                         # 环境变量配置
+│
+├── backend/                     # 后端服务
+│   ├── app.py                   # Flask 主应用（API 路由）
+│   ├── config.py                # 全局配置（API 端点、限额等）
+│   ├── requirements.txt         # Python 依赖
+│   └── mock_demo.jpg            # 降级演示图片
+│
+└── frontend/                    # 前端应用
+    ├── index.html               # 入口 HTML
+    ├── vite.config.js           # Vite 配置（含 API 代理）
+    ├── package.json
+    │
+    ├── public/images/           # 静态素材图片
+    │   ├── *横版.jpg            # 轮播/详情 Banner 图
+    │   └── *竖版.jpg            # 图鉴背景图
+    │
+    └── src/
+        ├── main.js              # Vue 应用入口
+        ├── App.vue              # 根组件（页面编排）
+        ├── assets/
+        │   └── design-tokens.css # 设计系统 CSS 变量
+        │
+        ├── stores/
+        │   └── gameStore.js     # Pinia 状态管理（核心逻辑）
+        │
+        ├── data/
+        │   ├── styles.js        # 风格定义
+        │   ├── prompts.js       # 提示词模板
+        │   ├── prompts.json     # 提示词参数配置
+        │   ├── constants.js     # 常量（稀有度、颜色等）
+        │   ├── forgeTips.js     # 生成提示语
+        │   └── knowledge.js     # 非遗知识数据
+        │
+        └── components/
+            ├── HeaderBar.vue    # 顶部标题栏
+            ├── ResoBar.vue      # 共鸣等级进度条
+            ├── StyleCarousel.vue # 风格轮播选择器
+            ├── StyleGrid.vue    # 风格网格选择
+            ├── UploadZone.vue   # 图片上传区
+            ├── ParamControls.vue # 参数精调面板
+            ├── ForgeOverlay.vue # 生成工序界面
+            ├── RarityPreview.vue # 稀有度预览
+            ├── CardReveal.vue   # 卡牌翻转查看器
+            ├── GalleryView.vue  # 图鉴收藏页面
+            ├── NavBar.vue       # 底部导航栏
+            ├── ConfirmModal.vue # 确认弹窗
+            └── ToastNotice.vue  # Toast 通知提示
+```
+
+---
+
+## 🚀 快速开始
+
+### 前提条件
+
+- Python 3.10+
+- Node.js 18+
+- yarn 或 npm
+
+### 1. 后端启动
+
+```bash
+cd backend
+pip install -r requirements.txt
+
+# 配置环境变量
+# 在 .env 中设置 API KEY 等信息（参考 .env 示例）
+
+python app.py
+```
+
+### 2. 前端启动
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+前端开发服务器自动代理 `/api` 请求到后端。
+
+### 3. 访问
+
+打开浏览器访问前端开发服务器提供的地址，即可体验。
+
+---
+
+## 📡 API 文档
+
+### `POST /api/generate`
+
+生成非遗风格卡牌。
+
+**请求体：**
+
+```json
+{
+  "image": "<base64 编码图片>",
+  "style": "miao_silver",
+  "rarity_level": 0,
+  "prompt": "<完整提示词>",
+  "negative": "<反向提示词>"
+}
+```
+
+**响应：**
+
+```json
+{
+  "image": "<base64 编码生成图>",
+  "style": "miao_silver",
+  "rarity": "清赏",
+  "rarity_level": 0,
+  "mock": false,
+  "quota_remaining": 44
+}
+```
+
+- `mock: true` 表示 API 调用失败，返回的是演示图
+- 生成尺寸：1728 × 2304（3:4 比例）
+
+### `GET /api/health`
+
+健康检查。返回 `{"status": "ok", "time": "..."}`。
+
+### `GET /api/stats`
+
+生成统计。返回生成次数、平均耗时、mock 占比等数据。
+
+---
+
+## 💾 数据存储方案
+
+| 数据 | 位置 | 格式 | 用途 |
+|:-----|:-----|:-----|:------|
+| 收藏卡牌 | IndexedDB (`heritage-lens`) | JSON 对象数组 | 用户收藏的生成卡片 |
+| 共鸣等级 | IndexedDB (`heritage-lens`) | 嵌套对象 | 各风格的共鸣经验值 |
+| 环境变量 | `backend/.env` | KEY=VALUE | API Key、模型名、端口等配置 |
+| 提示词配置 | `frontend/src/data/prompts.json` | JSON | 四层参数化提示词模板 |
+| 风格定义 | `frontend/src/data/styles.js` | JS 对象 | 风格 ID、名称、资源映射 |
+
+---
+
+## 🖼 效果展示
+
+> 上传人像照片后，AI 自动生成以下风格的非遗艺术卡牌：
+
+| 风格 | 预览 |
+|:-----|:------|
+| 苗族银饰 | ![苗族古典](public/images/苗族_古典_竖版.jpg) |
+| 清宫华服 | ![清宫华服](public/images/清宫华服_古典_竖版.jpg) |
+| 敦煌艺术 | ![敦煌艺术](public/images/敦煌_艺术_竖版.jpg) |
+
+*(实际效果因输入照片和生成参数而异)*
+
+---
+
+## 🧩 核心设计
+
+### 共鸣系统
+
+```
+连续生成同一风格 → 积累共鸣经验 → 提升共鸣等级
+Lv.1 → Lv.5，每级需要更多经验
+升级后该风格的生成结果品质提升
+```
+
+### 稀有度保底
+
+```
+清赏 (60%) → 珍赏 (30%) → 神品 (10%)
+连续 3 次未出珍赏 → 下一次必出珍赏
+连续 10 次未出神品 → 下一次必出神品
+```
+
+---
+
+## 🤝 参与项目
+
+本项目为 TRAE AI 创造力大赛参赛作品。欢迎 Issue 反馈与 Star 支持。
+
+---
+
+*Made with ❤️ for cultural heritage preservation*

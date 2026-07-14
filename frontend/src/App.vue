@@ -1,8 +1,10 @@
 <template>
   <div class="app">
     <!-- ===== 全局头栏（所有视图共享） ===== -->
-    <HeaderBar />
-    <ResoBar />
+    <div class="app-header">
+      <HeaderBar />
+      <ResoBar />
+    </div>
 
     <!-- ===== 主视图 ===== -->
     <template v-if="store.viewState === 'main'">
@@ -237,5 +239,10 @@ function onViewCardFromGallery() {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+.app-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 </style>

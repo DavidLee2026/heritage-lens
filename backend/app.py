@@ -88,7 +88,7 @@ def generate():
         payload = {
             "model": config.ARK_MODEL,
             "prompt": arp_prompt,
-            "image": f"data:image/png;base64,{image_base64}",
+            "images": [f"data:image/png;base64,{image_base64}"],
             "size": "1728x2304",
             "response_format": "b64_json",
             "watermark": False,
@@ -99,14 +99,24 @@ def generate():
             "Content-Type": "application/json",
             "Authorization": f"Bearer {config.ARK_API_KEY}",
         }
-        try:
-            resp = requests.post(config.ARK_ENDPOINT, headers=headers, json=payload, timeout=60)
-            result = resp.json()
-            if resp.status_code == 200 and result.get("data"):
-                image_result = result["data"][0].get("b64_json")
-                api_usage_counter += 1
-        except Exception as e:
-            print(f"API 调用异常: {e}")
+        # 重试机制：应对 SSL/网络不稳定，最多重试 3 次
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                resp = requests.post(config.ARK_ENDPOINT, headers=headers, json=payload, timeout=60)
+                result = resp.json()
+                if resp.status_code == 200 and result.get("data"):
+                    image_result = result["data"][0].get("b64_json")
+                    api_usage_counter += 1
+                    break
+                else:
+                    print(f"API 返回异常 (第{attempt+1}次): status={resp.status_code}, body={result.get('error','')}")
+            except Exception as e:
+                print(f"API 调用异常 (第{attempt+1}/{max_retries}次): {e}")
+            if attempt < max_retries - 1:
+                wait = (attempt + 1) * 2
+                print(f"等待 {wait}s 后重试...")
+                time.sleep(wait)
 
     # Mock 降级
     if not image_result:

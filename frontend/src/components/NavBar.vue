@@ -44,10 +44,7 @@ watch(
 .nav-bar {
   display: flex;
   gap: 8px;
-  position: sticky;
-  bottom: 0;
   padding: 8px 0;
-  background: var(--bg-primary);
 }
 .nav-btn {
   flex: 1;

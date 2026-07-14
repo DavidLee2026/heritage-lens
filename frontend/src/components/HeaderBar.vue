@@ -18,7 +18,7 @@ const resoLabel = computed(() => `Lv.${store.currentResonance.level}`)
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 0;
+  padding: 4px 0;
 }
 .header-title {
   font-size: 20px;
