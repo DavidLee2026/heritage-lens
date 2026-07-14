@@ -18,9 +18,6 @@
             @mouseenter="tiltActive = true"
             @mouseleave="onTiltLeave"
             @click="flipCard"
-            @touchstart="onCardTouchStart"
-            @touchmove.prevent="onCardTouchMove"
-            @touchend="onCardTouchEnd"
           >
             <div class="flip-box" :class="[rarityClass, { flipped: isFlipped }]">
               <!-- ========== 正面 ========== -->
@@ -236,99 +233,10 @@ function bubbleClass(dimIdx) {
   return 'locked'
 }
 
-/* ========== 卡牌交互（点击 + 手指滑动） ========== */
-// 滑动翻转的内部状态（不需要响应式）
-let swipeTouchStartX = 0
-let swipeDragged = false
-let swipeIsDragging = false
-let swipeAnimLock = false
-let swipeCurrentAngle = 0
-
-function getFlipBoxEl() {
-  return tiltRef.value?.querySelector('.flip-box') || null
-}
-
-/** 手指触摸开始 */
-function onCardTouchStart(e) {
-  if (swipeAnimLock) return
-  swipeDragged = false
-  swipeIsDragging = true
-  swipeTouchStartX = e.touches[0].clientX
-
-  const box = getFlipBoxEl()
-  if (box) {
-    box.classList.add('dragging')
-    const currentAngle = isFlipped.value ? 180 : 0
-    swipeCurrentAngle = currentAngle
-    box.style.transform = `rotateY(${currentAngle}deg) translateZ(50px)`
-    box.style.webkitTransform = `rotateY(${currentAngle}deg) translateZ(50px)`
-  }
-}
-
-/** 手指滑动中 — 跟手旋转 */
-function onCardTouchMove(e) {
-  if (!swipeIsDragging) return
-  e.preventDefault()
-  swipeDragged = true
-
-  const deltaX = e.touches[0].clientX - swipeTouchStartX
-  const baseAngle = isFlipped.value ? 180 : 0
-  const sensitivity = 180 / 120              // 滑 120px = 转 180°
-  let angle = baseAngle - deltaX * sensitivity
-  angle = Math.max(0, Math.min(180, angle))
-  swipeCurrentAngle = angle
-
-  const box = getFlipBoxEl()
-  if (box) {
-    box.style.transform = `rotateY(${angle}deg) translateZ(50px)`
-    box.style.webkitTransform = `rotateY(${angle}deg) translateZ(50px)`
-  }
-}
-
-/** 手指抬起 — 吸附到正面或背面 */
-function onCardTouchEnd(e) {
-  if (!swipeIsDragging) return
-  swipeIsDragging = false
-
-  const box = getFlipBoxEl()
-
-  if (swipeDragged) {
-    const deltaX = e.changedTouches[0].clientX - swipeTouchStartX
-    const fastSwipe = Math.abs(deltaX) > 50
-
-    // 判断吸附方向
-    let willShowBack
-    if (fastSwipe) {
-      // 快速滑动：左滑 → 背，右滑 → 正
-      willShowBack = deltaX < 0
-    } else {
-      // 慢速：靠哪面吸哪面（>90° → 背面）
-      willShowBack = swipeCurrentAngle >= 90
-    }
-
-    isFlipped.value = willShowBack
-
-    // 锁定动画期间，防止触摸干扰
-    swipeAnimLock = true
-    setTimeout(() => { swipeAnimLock = false }, 700)
-  }
-
-  // 清除 inline 样式 + dragging 类 → CSS transition 做缓动吸附
-  if (box) {
-    box.classList.remove('dragging')
-    box.style.transform = ''
-    box.style.webkitTransform = ''
-  }
-}
-
-/** 点击翻转（桌面端 / 没有滑动时） */
+/* ========== 卡牌交互 ========== */
 function flipCard() {
-  // 如果手指刚滑过，跳过本次 click（touch → click 时序）
-  if (swipeDragged) {
-    swipeDragged = false
-    return
-  }
   isFlipped.value = !isFlipped.value
+  // 首次点击请求陀螺仪权限（iOS 13+）
   requestOrientationPermission()
 }
 
@@ -376,8 +284,9 @@ function startTracking() {
     if (tiltAnimFrame) cancelAnimationFrame(tiltAnimFrame)
     tiltAnimFrame = requestAnimationFrame(() => {
       // 相对校准值偏移，再乘灵敏度系数
-      const rotX = Math.max(-20, Math.min(20, (beta - calBeta) * 0.35))
-      const rotY = Math.max(-20, Math.min(20, (gamma - calGamma) * 0.35))
+      // ⚠️ 限制在 ±10° 内，过大角度会导致卡牌在 3D 视野中消失或背面暴露
+      const rotX = Math.max(-10, Math.min(10, (beta - calBeta) * 0.2))
+      const rotY = Math.max(-10, Math.min(10, (gamma - calGamma) * 0.2))
       tiltRef.value.style.transform = `rotateX(${-rotX}deg) rotateY(${rotY}deg)`
     })
   }
@@ -651,11 +560,6 @@ watch(
 .flip-box.flipped {
   -webkit-transform: rotateY(180deg) translateZ(50px);
   transform: rotateY(180deg) translateZ(50px);
-}
-/* 拖拽中禁用 CSS 过渡，实现跟手旋转 */
-.flip-box.dragging {
-  -webkit-transition: none !important;
-  transition: none !important;
 }
 /* 卡牌投影 — 按稀有度 */
 .flip-box.qingshang {
