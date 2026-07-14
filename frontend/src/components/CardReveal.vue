@@ -227,8 +227,71 @@ function bubbleClass(dimIdx) {
 }
 
 /* ========== 卡牌交互 ========== */
+let flipAnimating = false
+
+/**
+ * JS 驱动的卡牌翻转（不依赖 CSS backface-visibility，绕过 iOS WebKit bug）
+ *
+ * 原理：
+ * 1. requestAnimationFrame 逐帧旋转 flip-box
+ * 2. 动画中途（容器转 90°，两面皆侧对用户）切换正/背面透明度
+ * 3. 完全不用 backface-visibility: hidden，兼容所有 iOS 版本
+ */
 function flipCard() {
-  isFlipped.value = !isFlipped.value
+  if (flipAnimating) return
+  const box = tiltRef.value?.querySelector('.flip-box')
+  const front = box?.querySelector('.face-front')
+  const back = box?.querySelector('.face-back')
+  if (!box || !front || !back) {
+    isFlipped.value = !isFlipped.value
+    return
+  }
+
+  flipAnimating = true
+  const goingToBack = !isFlipped.value
+  const startAngle = isFlipped.value ? 180 : 0
+  const endAngle = goingToBack ? 180 : 0
+  const duration = 600
+  const startTime = performance.now()
+
+  // 设置初始状态
+  front.style.opacity = '1'
+  back.style.opacity = '0'
+  box.style.transform = `rotateY(${startAngle}deg)`
+  box.style.webkitTransform = `rotateY(${startAngle}deg)`
+
+  function animate(time) {
+    const t = Math.min((time - startTime) / duration, 1)
+    // ease-in-out cubic
+    const ease = t < 0.5
+      ? 4 * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 3) / 2
+    const angle = startAngle + (endAngle - startAngle) * ease
+    box.style.transform = `rotateY(${angle}deg)`
+    box.style.webkitTransform = `rotateY(${angle}deg)`
+
+    // 在 90°（侧对用户时）切换透明度，用户无感知
+    if (t >= 0.5) {
+      if (goingToBack) {
+        front.style.opacity = '0'
+        back.style.opacity = '1'
+      } else {
+        front.style.opacity = '1'
+        back.style.opacity = '0'
+      }
+    }
+
+    if (t < 1) {
+      requestAnimationFrame(animate)
+    } else {
+      box.style.transform = ''
+      box.style.webkitTransform = ''
+      isFlipped.value = goingToBack
+      flipAnimating = false
+    }
+  }
+
+  requestAnimationFrame(animate)
 }
 
 function onTiltMove(e) {
@@ -310,13 +373,12 @@ async function captureCardBlob() {
     })
 
     // 用 Canvas 绘制并导出
+    // ⚠️ 不要在 drawImage 之后再设 canvas.width/height——会清空画布
     const canvas = document.createElement('canvas')
     canvas.width = img.naturalWidth
     canvas.height = img.naturalHeight
     const ctx = canvas.getContext('2d')
     ctx.drawImage(img, 0, 0)
-    canvas.width = canvas.width // 修复 Safari 黑屏
-    canvas.height = canvas.height
 
     return new Promise((resolve) => {
       canvas.toBlob((b) => resolve(b), 'image/png')
@@ -459,13 +521,11 @@ watch(
   position: relative;
   -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
-  transition: transform 700ms cubic-bezier(0.23, 1, 0.32, 1);
   cursor: pointer;
   border-radius: 10px;
 }
 .flip-box.flipped {
-  -webkit-transform: rotateY(180deg);
-  transform: rotateY(180deg);
+  /* JS 驱动动画，CSS 只保留空状态 */
 }
 /* 卡牌投影 — 按稀有度 */
 .flip-box.qingshang {
@@ -480,8 +540,6 @@ watch(
 
 /* ===== 两面共享 ===== */
 .flip-face {
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
   border-radius: 10px;
   width: 100%;
 }
@@ -658,8 +716,6 @@ watch(
 .face-back {
   position: absolute;
   inset: 0;
-  -webkit-transform: rotateY(180deg);
-  transform: rotateY(180deg);
   padding: 20px 14px;
   display: flex;
   flex-direction: column;
