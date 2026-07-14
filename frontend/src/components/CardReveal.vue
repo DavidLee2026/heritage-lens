@@ -231,11 +231,6 @@ let flipAnimating = false
 
 /**
  * JS 驱动的卡牌翻转（不依赖 CSS backface-visibility，绕过 iOS WebKit bug）
- *
- * 原理：
- * 1. requestAnimationFrame 逐帧旋转 flip-box
- * 2. 动画中途（容器转 90°，两面皆侧对用户）切换正/背面透明度
- * 3. 完全不用 backface-visibility: hidden，兼容所有 iOS 版本
  */
 function flipCard() {
   if (flipAnimating) return
@@ -254,15 +249,19 @@ function flipCard() {
   const duration = 600
   const startTime = performance.now()
 
-  // 设置初始状态
-  front.style.opacity = '1'
-  back.style.opacity = '0'
+  // 设置初始状态 — ⚠️ 根据翻转方向设正确透明度
+  if (goingToBack) {
+    front.style.opacity = '1'
+    back.style.opacity = '0'
+  } else {
+    front.style.opacity = '0'
+    back.style.opacity = '1'
+  }
   box.style.transform = `rotateY(${startAngle}deg)`
   box.style.webkitTransform = `rotateY(${startAngle}deg)`
 
   function animate(time) {
     const t = Math.min((time - startTime) / duration, 1)
-    // ease-in-out cubic
     const ease = t < 0.5
       ? 4 * t * t * t
       : 1 - Math.pow(-2 * t + 2, 3) / 2
@@ -270,8 +269,18 @@ function flipCard() {
     box.style.transform = `rotateY(${angle}deg)`
     box.style.webkitTransform = `rotateY(${angle}deg)`
 
-    // 在 90°（侧对用户时）切换透明度，用户无感知
-    if (t >= 0.5) {
+    // 从 t=0.35 到 t=0.65 做渐变透明度过渡（卡牌在 60°-120° 区间两面都侧对用户）
+    if (t >= 0.35 && t < 0.65) {
+      const f = (t - 0.35) / 0.3  // 0→1
+      if (goingToBack) {
+        front.style.opacity = String(1 - f)
+        back.style.opacity = String(f)
+      } else {
+        front.style.opacity = String(f)
+        back.style.opacity = String(1 - f)
+      }
+    } else if (t >= 0.65) {
+      // 渐变结束，锁定目标面
       if (goingToBack) {
         front.style.opacity = '0'
         back.style.opacity = '1'
@@ -437,6 +446,17 @@ watch(
       justRevealed.value = false
       bubblesVisible.value = false
       tooltipVisible.value = false
+      flipAnimating = false
+      // 清除 JS 残留的 inline style，让 CSS 默认透明度生效
+      const box = tiltRef.value?.querySelector('.flip-box')
+      if (box) {
+        const front = box.querySelector('.face-front')
+        const back = box.querySelector('.face-back')
+        if (front) front.style.opacity = ''
+        if (back) back.style.opacity = ''
+        box.style.transform = ''
+        box.style.webkitTransform = ''
+      }
       await nextTick()
       justRevealed.value = true
       setTimeout(() => {
@@ -549,6 +569,12 @@ watch(
   position: relative;
   border-radius: 10px;
   overflow: hidden;
+  opacity: 1;
+}
+
+/* ===== 背面默认隐藏 ===== */
+.face-back {
+  opacity: 0;
 }
 .face-front.qingshang {
   background: #fcf9f4;
