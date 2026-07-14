@@ -8,8 +8,10 @@ GET  /api/stats     — 生成统计
 后端只负责调用生图 API 返回图片。
 """
 import os
+import json
 import time
-from datetime import datetime
+from datetime import date, datetime
+from pathlib import Path
 
 import requests
 from flask import Flask, jsonify, request
@@ -20,7 +22,41 @@ import config
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
-api_usage_counter = 0
+# ─── API 用量持久化（JSON：每日计数 + IP 计数） ─────────────
+QUOTA_FILE = Path(__file__).parent / ".api_quota.json"
+
+def _load_quota():
+    """读取用量数据，含日期自愈——如果跨天了自动重置"""
+    try:
+        data = json.loads(QUOTA_FILE.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {}
+
+    today = date.today().isoformat()  # e.g. "2026-07-14"
+
+    # 日计数：跨天了就重置
+    daily = data.get("daily", {})
+    if daily.get("date") != today:
+        daily = {"date": today, "count": 0}
+
+    # IP 计数：跨天了就全部重置
+    ips = data.get("ips", {})
+    if data.get("ip_date") != today:
+        ips = {}
+
+    return daily, ips, today
+
+def _save_quota(daily, ips, today):
+    """写回用量数据"""
+    QUOTA_FILE.write_text(json.dumps({
+        "daily": daily,
+        "ip_date": today,
+        "ips": ips,
+    }, ensure_ascii=False, indent=2))
+
+# 加载初始数据
+_daily_quota, _ip_quota, _today = _load_quota()
+
 generation_log = []  # 生成记录 [{time, duration, style, rarity, mock}]
 
 
@@ -45,6 +81,7 @@ def stats():
 
     durations = [log["duration"] for log in generation_log if not log["mock"]]
     mock_count = sum(1 for log in generation_log if log["mock"])
+    daily, _, _ = _load_quota()
 
     return jsonify({
         "count": len(generation_log),
@@ -55,14 +92,15 @@ def stats():
         "min_duration": min(durations) if durations else None,
         "total_duration": round(sum(durations), 2) if durations else None,
         "logs": generation_log,
-        "quota_used": api_usage_counter,
+        "quota": {
+            "today": daily.get("count", 0),
+            "daily_limit": config.DAILY_IMAGE_LIMIT,
+        },
     })
 
 
 @app.route("/api/generate", methods=["POST"])
 def generate():
-    global api_usage_counter
-
     data = request.get_json()
     if not data or not data.get("image"):
         return jsonify({"error": "缺少图片数据"}), 400
@@ -75,12 +113,29 @@ def generate():
     prompt = data.get("prompt", "")
     negative_prompt = data.get("negative", "")
 
-    # 调 API
+    # ─── 限额检查 ───────────────────────────────────────────
+    daily, ips, today = _load_quota()
+    client_ip = request.remote_addr or "unknown"
+    user_today = ips.get(client_ip, 0)
+
+    daily_ok = daily["count"] < config.DAILY_IMAGE_LIMIT
+    lifetime_ok = True  # 每日限额已经够用，总限额暂不新增判断
+    user_ok = user_today < config.USER_DAILY_LIMIT
+
+    if not daily_ok:
+        print(f"⚠️ 每日用量已达上限 ({daily['count']}/{config.DAILY_IMAGE_LIMIT})")
+        return jsonify({"error": "今天的生成次数已达上限，明天再来吧 🏮"}), 429
+
+    if not user_ok:
+        print(f"⚠️ IP {client_ip} 今日用量已满 ({user_today}/{config.USER_DAILY_LIMIT})")
+        return jsonify({"error": "你的今日生成次数已用完，明天再来试试吧 🏮"}), 429
+
+    # ─── 调 API ─────────────────────────────────────────────
     image_result = None
     mock_used = False
     start_time = time.time()
 
-    if config.ARK_API_KEY and api_usage_counter < config.FREE_LIMIT:
+    if config.ARK_API_KEY:
         arp_prompt = prompt if prompt else (
             f"Transform this person in the photo into a traditional ethnic style portrait. "
             f"IMPORTANT - face identity preservation."
@@ -107,7 +162,11 @@ def generate():
                 result = resp.json()
                 if resp.status_code == 200 and result.get("data"):
                     image_result = result["data"][0].get("b64_json")
-                    api_usage_counter += 1
+
+                    # 调用成功 → 更新用量
+                    daily["count"] += 1
+                    ips[client_ip] = user_today + 1
+                    _save_quota(daily, ips, today)
                     break
                 else:
                     print(f"API 返回异常 (第{attempt+1}次): status={resp.status_code}, body={result.get('error','')}")
@@ -139,7 +198,7 @@ def generate():
         "rarity": rarity_label,
         "rarity_level": rarity_level,
         "mock": mock_used,
-        "quota_remaining": max(0, config.FREE_LIMIT - api_usage_counter),
+        "quota_remaining": max(0, config.DAILY_IMAGE_LIMIT - daily["count"]),
     })
 
 

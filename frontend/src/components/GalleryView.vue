@@ -205,6 +205,9 @@ function onClearConfirm() {
   font-family: inherit;
   transition: 0.15s;
   border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  -webkit-appearance: none;
+  appearance: none;
 }
 .gallery-back:hover { background: var(--border-light); }
 .gallery-back:active { transform: scale(0.92); }
@@ -284,9 +287,9 @@ function onClearConfirm() {
   z-index: 0;
   opacity: 0.5;
 }
-.gi-img-bg.bg-miao_silver { background-image: url('/images/苗族_古典_竖版.jpg'); }
-.gi-img-bg.bg-court_dress { background-image: url('/images/清宫华服_古典_竖版.jpg'); }
-.gi-img-bg.bg-dunhuang { background-image: url('/images/敦煌_艺术_竖版.jpg'); }
+.gi-img-bg.bg-miao_silver { background-image: url('/heritage-lens/images/苗族_古典_竖版.jpg'); }
+.gi-img-bg.bg-court_dress { background-image: url('/heritage-lens/images/清宫华服_古典_竖版.jpg'); }
+.gi-img-bg.bg-dunhuang { background-image: url('/heritage-lens/images/敦煌_艺术_竖版.jpg'); }
 .gi-rarity-bar {
   position: absolute;
   bottom: 0; left: 0; right: 0;

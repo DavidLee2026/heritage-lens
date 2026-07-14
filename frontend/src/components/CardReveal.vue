@@ -106,7 +106,7 @@
           v-text="tooltipText"
         ></div>
 
-        <div class="card-hint">点击卡牌翻转</div>
+        <div class="card-hint">🔄 点击卡牌翻转</div>
 
         <!-- 提示词 -->
         <div v-if="store.currentResult?.prompt" class="prompt-display">
@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useGameStore } from '../stores/gameStore.js'
 import { getStyleById } from '../data/styles.js'
 import { KNOWLEDGE } from '../data/knowledge.js'
@@ -165,6 +165,14 @@ const bubblesVisible = ref(false)
 const tooltipVisible = ref(false)
 const tooltipText = ref('')
 const tooltipStyle = ref({})
+let orientationHandler = null
+let tiltAnimFrame = null
+
+// 陀螺仪校准数据：卡牌打开时记录当前姿态作为"零位"
+let calBeta = 0
+let calGamma = 0
+let calSamples = []
+let calTimer = null
 
 /* ========== 计算属性 ========== */
 const result = computed(() => store.currentResult)
@@ -184,9 +192,9 @@ const cardStyleLabel = computed(() => {
 
 /** 背面窄 banner 图片映射 */
 const BANNER_IMG = {
-  miao_silver: '/images/苗族_古典_横版.jpg',
-  court_dress: '/images/清宫华服_古典_横版.jpg',
-  dunhuang: '/images/敦煌_艺术_横版.jpg',
+  miao_silver: '/heritage-lens/images/苗族_古典_横版.jpg',
+  court_dress: '/heritage-lens/images/清宫华服_古典_横版.jpg',
+  dunhuang: '/heritage-lens/images/敦煌_艺术_横版.jpg',
 }
 const bannerImage = computed(() => {
   const sid = result.value?.style || store.selectedStyle
@@ -228,6 +236,8 @@ function bubbleClass(dimIdx) {
 /* ========== 卡牌交互 ========== */
 function flipCard() {
   isFlipped.value = !isFlipped.value
+  // 首次点击请求陀螺仪权限（iOS 13+）
+  requestOrientationPermission()
 }
 
 function onTiltMove(e) {
@@ -244,6 +254,78 @@ function onTiltLeave() {
     tiltRef.value.style.transform = ''
   }
 }
+
+/* ========== 移动端陀螺仪跟随（含初始姿态校准） ========== */
+/**
+ * 校准原理：卡牌打开瞬间，用户当前握持手机的姿态 = "正对用户"的零位。
+ * 采集前 300ms 的 beta/gamma 均值作为校准值，之后所有角度都是相对偏移。
+ */
+function calibrateGyro(e) {
+  if (e.beta === null || e.gamma === null) return
+  calSamples.push({ beta: e.beta, gamma: e.gamma })
+  if (calSamples.length >= 8) {
+    calBeta = calSamples.reduce((s, v) => s + v.beta, 0) / calSamples.length
+    calGamma = calSamples.reduce((s, v) => s + v.gamma, 0) / calSamples.length
+    calSamples = []
+    // 校准完成，切换到跟踪模式
+    if (orientationHandler) {
+      window.removeEventListener('deviceorientation', orientationHandler)
+    }
+    startTracking()
+  }
+}
+
+function startTracking() {
+  orientationHandler = (e) => {
+    if (!tiltRef.value) return
+    const beta = e.beta
+    const gamma = e.gamma
+    if (beta === null || gamma === null) return
+    if (tiltAnimFrame) cancelAnimationFrame(tiltAnimFrame)
+    tiltAnimFrame = requestAnimationFrame(() => {
+      // 相对校准值偏移，再乘灵敏度系数
+      const rotX = Math.max(-20, Math.min(20, (beta - calBeta) * 0.35))
+      const rotY = Math.max(-20, Math.min(20, (gamma - calGamma) * 0.35))
+      tiltRef.value.style.transform = `rotateX(${-rotX}deg) rotateY(${rotY}deg)`
+    })
+  }
+  window.addEventListener('deviceorientation', orientationHandler)
+}
+
+function startOrientationTilt() {
+  if (orientationHandler) return
+  // 先进入校准模式（采集 8 个样本）
+  orientationHandler = calibrateGyro
+  window.addEventListener('deviceorientation', orientationHandler)
+}
+
+function stopOrientationTilt() {
+  if (orientationHandler) {
+    window.removeEventListener('deviceorientation', orientationHandler)
+    orientationHandler = null
+  }
+  if (tiltAnimFrame) {
+    cancelAnimationFrame(tiltAnimFrame)
+    tiltAnimFrame = null
+  }
+  calSamples = []
+  calBeta = 0
+  calGamma = 0
+  if (tiltRef.value) {
+    tiltRef.value.style.transform = ''
+  }
+}
+
+function requestOrientationPermission() {
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(state => {
+      if (state === 'granted') startOrientationTilt()
+    }).catch(() => {})
+  }
+}
+
+onUnmounted(() => stopOrientationTilt())
 
 /* ========== 气泡 tooltip ========== */
 function showBubbleTip(e, dimIdx) {
@@ -291,33 +373,37 @@ function deleteCard() {
   emit('close')
 }
 
-/** 捕获卡面为图片 blob */
-function captureCardBlob() {
-  return new Promise((resolve) => {
-    const source = tiltRef.value?.querySelector('.flip-box')
-    if (!source) {
-      resolve(null)
-      return
-    }
+/** 捕获卡面为图片 blob — 用 Canvas 原生绘制，避免 html2canvas 黑屏问题 */
+async function captureCardBlob() {
+  const imgSrc = cardImage.value
+  if (!imgSrc) return null
 
-    if (typeof html2canvas !== 'undefined') {
-      html2canvas(source, { scale: 2, useCORS: false, backgroundColor: null, allowTaint: true })
-        .then((canvas) => canvas.toBlob((b) => resolve(b), 'image/png'))
-        .catch(() => fallback())
-    } else {
-      fallback()
-    }
+  try {
+    // 创建 Image 对象等待加载完成
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    await new Promise((resolve, reject) => {
+      img.onload = resolve
+      img.onerror = reject
+      img.src = imgSrc
+    })
 
-    function fallback() {
-      // 直接下载卡面图片（不含稀有度栏和底栏）
-      const imgSrc = cardImage.value
-      if (!imgSrc) { resolve(null); return }
-      fetch(imgSrc)
-        .then((r) => r.blob())
-        .then((b) => resolve(b))
-        .catch(() => resolve(null))
-    }
-  })
+    // 用 Canvas 绘制并导出
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    canvas.width = canvas.width // 修复 Safari 黑屏
+    canvas.height = canvas.height
+
+    return new Promise((resolve) => {
+      canvas.toBlob((b) => resolve(b), 'image/png')
+    })
+  } catch (e) {
+    console.warn('截图失败', e)
+    return null
+  }
 }
 
 async function downloadCard() {
@@ -359,7 +445,7 @@ async function shareCard() {
   }
 }
 
-/* ========== 打开时触发动画 ========== */
+/* ========== 打开时触发动画 + 陀螺仪 ========== */
 watch(
   () => props.visible,
   async (v) => {
@@ -373,6 +459,13 @@ watch(
       setTimeout(() => {
         bubblesVisible.value = true
       }, 600)
+      // 非 iOS 设备直接启动陀螺仪；iOS 需用户手势触发
+      if (typeof DeviceOrientationEvent !== 'undefined' &&
+          typeof DeviceOrientationEvent.requestPermission !== 'function') {
+        startOrientationTilt()
+      }
+    } else {
+      stopOrientationTilt()
     }
   }
 )
@@ -447,6 +540,8 @@ watch(
   transition: transform 200ms ease-out;
   will-change: transform;
   cursor: pointer;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 .flip-box {
   position: relative;
@@ -454,6 +549,8 @@ watch(
   transform-style: preserve-3d;
   cursor: pointer;
   border-radius: 10px;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 .flip-box.flipped { transform: rotateY(180deg); }
 
@@ -638,10 +735,8 @@ watch(
 /* ========== Back Face ========== */
 .face-back {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%;
-  height: 100%;
-  transform: rotateY(180deg);
+  inset: 0;
+  transform: rotateY(180deg) translateZ(0);
   padding: 20px 14px;
   display: flex;
   flex-direction: column;

@@ -29,3 +29,18 @@ Thumbs.db
 
 # ─── 日志 ───
 *.log
+
+# ─── TRAE 工具 ───
+.trae-html-share-packages/
+
+# ─── 比赛 & 评测文档 ───
+TRAE大赛初赛投稿模板.md
+*评测报告*.md
+
+# ─── 打包文件 ───
+*.zip
+*.tar.gz
+
+# ─── 运行时数据 ───
+backend/.api_counter
+backend/.api_quota.json

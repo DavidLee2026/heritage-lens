@@ -324,6 +324,15 @@ export const useGameStore = defineStore('game', () => {
       const data = await res.json()
       apiImage = data.image
       mockUsed = data.mock || false
+
+      // 用量预警：剩余次数 ≤ 5 时提示用户
+      const remaining = data.quota_remaining
+      if (remaining !== undefined && remaining <= 5 && remaining > 0) {
+        const msg = remaining === 1
+          ? '⚠️ 今日生成配额仅剩最后 1 次'
+          : `⚠️ 今日生成配额仅剩 ${remaining} 次`
+        showToast(msg, 'info', 6000)
+      }
     } catch (err) {
       console.warn('API 调用失败，使用 Mock 降级', err.message)
       mockUsed = true

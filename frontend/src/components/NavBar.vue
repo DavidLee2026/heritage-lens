@@ -71,6 +71,9 @@ watch(
   transition: 0.2s;
   position: relative;
   font-family: inherit;
+  color: var(--text-primary);
+  -webkit-appearance: none;
+  appearance: none;
 }
 .nav-btn.active {
   border-color: var(--accent);

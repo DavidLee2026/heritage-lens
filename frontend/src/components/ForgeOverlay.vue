@@ -89,24 +89,24 @@ function startForge() {
   customDesc.value = ''
   waitingForApi.value = false
 
-  // 30 秒总时长：0-70% ~16s, 70-90% ~8s, 90-95% ~3s, 95%等API, 收尾~2s
+  // 30 秒总时长：0-70% ~16s, 70-90% ~8s, 90-97% ~3s, 97%等API, 收尾~2s
   timer = setInterval(() => {
     if (progress.value < 70) {
       progress.value += Math.random() * 1.2 + 0.3
     } else if (progress.value < 90) {
       progress.value += Math.random() * 0.6 + 0.2
-    } else if (progress.value < 95) {
+    } else if (progress.value < 97) {
       progress.value += Math.random() * 0.2 + 0.04
     } else if (waitingForApi.value) {
-      // 95% 停顿——等 API 返回
+      // 97% 停顿——等 API 返回
       // 进度条不动，但冷知识继续轮换
     } else {
-      // 95% → 100% 收尾
+      // 97% → 100% 收尾
       progress.value += Math.random() * 0.5 + 0.15
     }
 
-    // 到达 95% 且 API 还没完成 → 进入等待态
-    if (progress.value >= 95 && !props.apiDone && !waitingForApi.value) {
+    // 到达 97% 且 API 还没完成 → 进入等待态
+    if (progress.value >= 97 && !props.apiDone && !waitingForApi.value) {
       waitingForApi.value = true
       customDesc.value = '正在等待 AI 服务器返回结果...'
     }

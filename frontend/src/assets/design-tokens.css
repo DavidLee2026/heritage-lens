@@ -88,4 +88,11 @@ html, body {
   box-sizing: border-box;
 }
 
+/* iOS 按钮默认蓝色修复 */
+button {
+  color: var(--text-primary);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 /* 无障碍：减少动效 */
