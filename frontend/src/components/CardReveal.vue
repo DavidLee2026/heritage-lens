@@ -283,8 +283,13 @@ function flipCard() {
     if (t < 1) {
       requestAnimationFrame(animate)
     } else {
-      box.style.transform = ''
-      box.style.webkitTransform = ''
+      // ⚠️ 不清除 transform！保持容器旋转角度，让 face-back 的 rotateY(180deg)
+      // 与容器角度叠加 = 360° = 正对用户。清除 transform 会导致背面朝外不可见。
+      if (!goingToBack) {
+        // 返回正面时清除 transform（容器回到 0°，正面自然朝外）
+        box.style.transform = ''
+        box.style.webkitTransform = ''
+      }
       isFlipped.value = goingToBack
       flipAnimating = false
     }
