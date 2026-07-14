@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useGameStore } from '../stores/gameStore.js'
 import { getStyleById } from '../data/styles.js'
 import { KNOWLEDGE } from '../data/knowledge.js'
@@ -165,14 +165,7 @@ const bubblesVisible = ref(false)
 const tooltipVisible = ref(false)
 const tooltipText = ref('')
 const tooltipStyle = ref({})
-let orientationHandler = null
 let tiltAnimFrame = null
-
-// 陀螺仪校准数据：卡牌打开时记录当前姿态作为"零位"
-let calBeta = 0
-let calGamma = 0
-let calSamples = []
-let calTimer = null
 
 /* ========== 计算属性 ========== */
 const result = computed(() => store.currentResult)
@@ -236,8 +229,6 @@ function bubbleClass(dimIdx) {
 /* ========== 卡牌交互 ========== */
 function flipCard() {
   isFlipped.value = !isFlipped.value
-  // 首次点击请求陀螺仪权限（iOS 13+）
-  requestOrientationPermission()
 }
 
 function onTiltMove(e) {
@@ -255,78 +246,7 @@ function onTiltLeave() {
   }
 }
 
-/* ========== 移动端陀螺仪跟随（含初始姿态校准） ========== */
-/**
- * 校准原理：卡牌打开瞬间，用户当前握持手机的姿态 = "正对用户"的零位。
- * 采集前 300ms 的 beta/gamma 均值作为校准值，之后所有角度都是相对偏移。
- */
-function calibrateGyro(e) {
-  if (e.beta === null || e.gamma === null) return
-  calSamples.push({ beta: e.beta, gamma: e.gamma })
-  if (calSamples.length >= 8) {
-    calBeta = calSamples.reduce((s, v) => s + v.beta, 0) / calSamples.length
-    calGamma = calSamples.reduce((s, v) => s + v.gamma, 0) / calSamples.length
-    calSamples = []
-    // 校准完成，切换到跟踪模式
-    if (orientationHandler) {
-      window.removeEventListener('deviceorientation', orientationHandler)
-    }
-    startTracking()
-  }
-}
-
-function startTracking() {
-  orientationHandler = (e) => {
-    if (!tiltRef.value) return
-    const beta = e.beta
-    const gamma = e.gamma
-    if (beta === null || gamma === null) return
-    if (tiltAnimFrame) cancelAnimationFrame(tiltAnimFrame)
-    tiltAnimFrame = requestAnimationFrame(() => {
-      // 相对校准值偏移，再乘灵敏度系数
-      // ⚠️ 限制在 ±10° 内，过大角度会导致卡牌在 3D 视野中消失或背面暴露
-      const rotX = Math.max(-10, Math.min(10, (beta - calBeta) * 0.2))
-      const rotY = Math.max(-10, Math.min(10, (gamma - calGamma) * 0.2))
-      tiltRef.value.style.transform = `rotateX(${-rotX}deg) rotateY(${rotY}deg)`
-    })
-  }
-  window.addEventListener('deviceorientation', orientationHandler)
-}
-
-function startOrientationTilt() {
-  if (orientationHandler) return
-  // 先进入校准模式（采集 8 个样本）
-  orientationHandler = calibrateGyro
-  window.addEventListener('deviceorientation', orientationHandler)
-}
-
-function stopOrientationTilt() {
-  if (orientationHandler) {
-    window.removeEventListener('deviceorientation', orientationHandler)
-    orientationHandler = null
-  }
-  if (tiltAnimFrame) {
-    cancelAnimationFrame(tiltAnimFrame)
-    tiltAnimFrame = null
-  }
-  calSamples = []
-  calBeta = 0
-  calGamma = 0
-  if (tiltRef.value) {
-    tiltRef.value.style.transform = ''
-  }
-}
-
-function requestOrientationPermission() {
-  if (typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission().then(state => {
-      if (state === 'granted') startOrientationTilt()
-    }).catch(() => {})
-  }
-}
-
-onUnmounted(() => stopOrientationTilt())
+/* ========== 陀螺仪已移除（iOS 导致白屏 + 越转越小） ========== */
 
 /* ========== 气泡 tooltip ========== */
 function showBubbleTip(e, dimIdx) {
@@ -446,7 +366,7 @@ async function shareCard() {
   }
 }
 
-/* ========== 打开时触发动画 + 陀螺仪 ========== */
+/* ========== 打开时触发动画 ========== */
 watch(
   () => props.visible,
   async (v) => {
@@ -460,13 +380,6 @@ watch(
       setTimeout(() => {
         bubblesVisible.value = true
       }, 600)
-      // 非 iOS 设备直接启动陀螺仪；iOS 需用户手势触发
-      if (typeof DeviceOrientationEvent !== 'undefined' &&
-          typeof DeviceOrientationEvent.requestPermission !== 'function') {
-        startOrientationTilt()
-      }
-    } else {
-      stopOrientationTilt()
     }
   }
 )
@@ -540,26 +453,19 @@ watch(
   width: 100%;
   -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
-  transition: transform 200ms ease-out;
-  will-change: transform;
   cursor: pointer;
 }
 .flip-box {
   position: relative;
-  -webkit-transform: translateZ(50px);
-  transform: translateZ(50px);
-  -webkit-transition: -webkit-transform 700ms cubic-bezier(0.23, 1, 0.32, 1);
-  transition: -webkit-transform 700ms cubic-bezier(0.23, 1, 0.32, 1),
-              transform 700ms cubic-bezier(0.23, 1, 0.32, 1);
   -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
+  transition: transform 700ms cubic-bezier(0.23, 1, 0.32, 1);
   cursor: pointer;
   border-radius: 10px;
-  /* ⚠️ 注意：不在 flip-box 上设 overflow: hidden，否则 iOS Safari 会在 3D 旋转中裁剪掉一半卡片 */
 }
 .flip-box.flipped {
-  -webkit-transform: rotateY(180deg) translateZ(50px);
-  transform: rotateY(180deg) translateZ(50px);
+  -webkit-transform: rotateY(180deg);
+  transform: rotateY(180deg);
 }
 /* 卡牌投影 — 按稀有度 */
 .flip-box.qingshang {
@@ -572,14 +478,15 @@ watch(
   box-shadow: 0 2px 8px rgba(212,168,83,0.15), 0 8px 24px rgba(212,168,83,0.10), 0 0 0 1px rgba(212,168,83,0.08);
 }
 
+/* ===== 两面共享 ===== */
 .flip-face {
-  backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   border-radius: 10px;
   width: 100%;
 }
 
-/* ========== Front Face (正常流撑高 flip-box) ========== */
+/* ===== 正面（流式撑高） ===== */
 .face-front {
   position: relative;
   border-radius: 10px;
