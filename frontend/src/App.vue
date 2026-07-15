@@ -5,10 +5,14 @@
       <HeaderBar @about="aboutVisible = true" />
     </div>
 
+    <!-- ===== 共鸣条（所有视图共享：主页用选中风格，图鉴详情用当前浏览风格） ===== -->
+    <ResoBar
+      v-if="store.gallery.length > 0"
+      :style-id="resoStyleId"
+    />
+
     <!-- ===== 主视图 ===== -->
     <template v-if="store.viewState === 'main'">
-      <!-- 共鸣条：有收藏卡片后才显示 -->
-      <ResoBar v-if="store.gallery.length > 0" />
 
       <div class="main-view">
         <!-- ===== 引导区 ===== -->
@@ -130,7 +134,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useGameStore } from './stores/gameStore.js'
 
 import HeaderBar from './components/HeaderBar.vue'
@@ -150,6 +154,14 @@ import AboutModal from './components/AboutModal.vue'
 
 const store = useGameStore()
 const aboutVisible = ref(false)
+
+/** 共鸣条显示的风格 ID：图鉴详情时用当前浏览风格，其余用选中风格 */
+const resoStyleId = computed(() => {
+  if (store.viewState === 'galleryDetail' && store.detailStyleId) {
+    return store.detailStyleId
+  }
+  return store.selectedStyle
+})
 
 /* ====== 引导区 ====== */
 const uploadRef = ref(null)
@@ -195,6 +207,11 @@ async function handleGenerate() {
 
 function onForgeComplete() {
   showForge.value = false
+  // 自动收藏到图鉴（notify=false 不触发红点，等用户点按钮才触发）
+  const upgraded = store.collectResult(false)
+  if (upgraded) {
+    upgradeLevel.value = upgraded   // 触发共鸣升级 toast
+  }
   submitting.value = false     // 🔓 解锁
   isFreshCard.value = true
   showCard.value = true

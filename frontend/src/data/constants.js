@@ -26,10 +26,20 @@ export const PROB_TABLE = [
   [5, 50, 45],   // 3 维偏离
 ]
 
-export const RESO_BONUS_LV2 = { 珍赏: 5, 神品: 3 } // 共鸣Lv.2+ 概率加成
-export const RESO_JUMP_LV4 = 18                     // 共鸣Lv.4 跃迁率
+// 共鸣等级概率加成表：index = 等级, { 珍赏加成, 神品加成, 跃迁率% }
+// 从清赏概率中扣除，按比例转移到珍赏/神品（溢出时截断，保证总和100%）
+export const RESO_BONUS_TABLE = [
+  { zhen: 0,  shen: 0,  jump: 0   },  // Lv.0
+  { zhen: 2,  shen: 1,  jump: 0   },  // Lv.1 解锁工艺气泡
+  { zhen: 5,  shen: 3,  jump: 0   },  // Lv.2 解锁传承气泡
+  { zhen: 8,  shen: 5,  jump: 0   },  // Lv.3 全部四识
+  { zhen: 12, shen: 6,  jump: 18  },  // Lv.4 寓意辉光 + 跃迁
+  { zhen: 16, shen: 9,  jump: 30  },  // Lv.5 满级全效 + 高跃迁
+]
+
+export const RESO_JUMP_LV4 = 18                     // 共鸣Lv.4 跃迁率（兼容旧引用）
 export const PITY_珍赏_MAX = 5                      // 连续N次无珍赏+ → 强制珍赏
-export const PITY_神品_MAX = 10                     // 连续N次无神品 → 概率翻倍
+export const PITY_神品_MAX = 10                     // 连续N次无神品 → 概率翻倍（神品保持稀缺）
 
 // 共鸣升级阈值
 export const RESONANCE_LEVELS = [0, 1, 3, 5, 8, 12]

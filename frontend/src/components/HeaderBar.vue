@@ -1,13 +1,20 @@
 <template>
   <div class="header">
-    <h1 class="header-title">🏮 非遗映像</h1>
+    <h1 class="header-title" @click="goHome">🏮 非遗映像</h1>
     <span class="header-badge">传承 · 创新</span>
     <button class="header-about" @click="$emit('about')">关于</button>
   </div>
 </template>
 
 <script setup>
+import { useGameStore } from '../stores/gameStore.js'
+
+const store = useGameStore()
 defineEmits(['about'])
+
+function goHome() {
+  store.showMain()
+}
 </script>
 
 <style scoped>
@@ -22,6 +29,12 @@ defineEmits(['about'])
   font-weight: 700;
   flex: 1;
   font-family: var(--font-display);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.header-title:active {
+  opacity: 0.6;
 }
 .header-badge {
   font-size: 13px;

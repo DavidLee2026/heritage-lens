@@ -1,5 +1,5 @@
 <template>
-  <div class="resonance-bar">
+  <div v-if="activeStyleId" class="resonance-bar">
     <div class="level" :class="levelClass">
       <span class="level-num">Lv.{{ reso.level }}</span>
       <span class="level-name">{{ levelNames[reso.level] }}</span>
@@ -17,14 +17,20 @@
 <script setup>
 import { computed } from 'vue'
 import { useGameStore } from '../stores/gameStore.js'
+import { getStyleById } from '../data/styles.js'
+
+const props = defineProps({
+  styleId: { type: String, default: null },
+})
 
 const store = useGameStore()
 
 const levelNames = ['初识', '探访', '研习', '精进', '融汇', '传承']
 
-const reso = computed(() => store.currentResonance)
-const styleData = computed(() => store.currentStyleData)
-const prog = computed(() => store.getResonanceProgress(store.selectedStyle))
+const activeStyleId = computed(() => props.styleId || store.selectedStyle)
+const reso = computed(() => store.getStyleResonance(activeStyleId.value))
+const styleData = computed(() => getStyleById(activeStyleId.value))
+const prog = computed(() => store.getResonanceProgress(activeStyleId.value))
 
 const levelClass = computed(() => `lv${reso.value.level}`)
 const remainText = computed(() =>

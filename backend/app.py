@@ -158,7 +158,7 @@ def generate():
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                resp = requests.post(config.ARK_ENDPOINT, headers=headers, json=payload, timeout=30)
+                resp = requests.post(config.ARK_ENDPOINT, headers=headers, json=payload, timeout=10)
                 result = resp.json()
                 if resp.status_code == 200 and result.get("data"):
                     image_result = result["data"][0].get("b64_json")

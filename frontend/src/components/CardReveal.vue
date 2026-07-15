@@ -106,12 +106,6 @@
           v-text="tooltipText"
         ></div>
 
-        <!-- 地图更新弱提示（仅在新生成 + 新风格时显示） -->
-        <div v-if="isFreshResult && willLightMap" class="map-hint-badge" @click="goToMapFromCard">
-          <span class="mh-icon">📍</span>
-          <span class="mh-text">地图已更新</span>
-        </div>
-
         <div class="card-hint">🔄 点击卡牌翻转</div>
 
         <!-- 提示词 -->
@@ -122,8 +116,8 @@
 
         <!-- 生成结果操作 -->
         <div v-if="isFreshResult" class="result-actions">
-          <button :disabled="submitting" @click="collectAndClose">🏛️ 收入图鉴</button>
-          <button class="primary" :disabled="submitting" @click="collectAndRegen">🔄 再来一次</button>
+          <button :disabled="submitting" @click="handleCollect">🏛️ 收入图鉴</button>
+          <button class="primary" :disabled="submitting" @click="handleRegen">🔄 再来一次</button>
         </div>
 
         <!-- 图鉴查看操作 -->
@@ -202,13 +196,6 @@ const bannerImage = computed(() => {
 const resonanceLevel = computed(() => {
   const reso = store.getStyleResonance(result.value?.style || store.selectedStyle)
   return reso.level
-})
-
-/** 是否会点亮地图（新风格 + 未在图鉴中） */
-const willLightMap = computed(() => {
-  const styleId = result.value?.style || store.selectedStyle
-  if (!styleId) return false
-  return !store.litStyles.has(styleId)
 })
 
 const rarityLabelHtml = computed(() => {
@@ -355,24 +342,15 @@ function hideBubbleTip() {
 }
 
 /* ========== 动作 ========== */
-function collectAndClose() {
-  const upgraded = store.collectResult()
-  if (upgraded) {
-    emit('collect', upgraded)
-  }
+function handleCollect() {
+  store.confirmNewCard()   // 触发图鉴红点
   emit('close')
 }
 
-function collectAndRegen() {
-  store.collectResult()
+function handleRegen() {
+  store.confirmNewCard()   // 触发图鉴红点
   emit('close')
   emit('regen')
-}
-
-/** 从卡牌跳转到地图页 */
-function goToMapFromCard() {
-  emit('close')
-  store.showMap()
 }
 
 function deleteCard() {
@@ -1027,31 +1005,6 @@ watch(
   color: var(--text-secondary);
   margin-top: 4px;
   margin-bottom: 12px;
-}
-
-/* 地图更新弱提示徽章 */
-.map-hint-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #fff5e8, #ffe8d4);
-  border: 1px solid rgba(212, 168, 83, 0.3);
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--accent);
-  cursor: pointer;
-  margin-bottom: 8px;
-  animation: mapHintSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  -webkit-tap-highlight-color: transparent;
-}
-.map-hint-badge:active { transform: scale(0.95); }
-.mh-icon { font-size: 13px; }
-
-@keyframes mapHintSlide {
-  0% { opacity: 0; transform: translateY(-8px); }
-  100% { opacity: 1; transform: translateY(0); }
 }
 
 .prompt-display {

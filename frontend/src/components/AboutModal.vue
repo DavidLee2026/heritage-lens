@@ -5,8 +5,14 @@
         <div class="about-modal">
           <button class="about-close" @click="$emit('close')">✕</button>
           <div class="about-body">
-            <h2 class="about-title">🏮 非遗映象</h2>
-            <p class="about-subtitle">Heritage Lens</p>
+            <!-- 装饰 Banner -->
+            <div class="about-banner">
+              <img src="/images/about/share-card-bg.jpg" alt="" class="banner-img" />
+              <div class="banner-overlay">
+                <h2 class="about-title">🏮 非遗映象</h2>
+                <p class="about-subtitle">Heritage Lens · 以 AI 致敬传统</p>
+              </div>
+            </div>
 
             <section class="about-section">
               <h3 class="as-heading">初心</h3>
@@ -26,6 +32,31 @@
                 <li><strong>共鸣升级</strong> — 收集同一风格越多，共鸣等级越高，稀有概率也随之提升</li>
                 <li><strong>图鉴收藏</strong> — 所有生成的卡牌存入图鉴，随时翻阅你的非遗收藏</li>
               </ul>
+            </section>
+
+            <!-- 稀有度卡牌展示 -->
+            <section class="about-section">
+              <h3 class="as-heading">稀有度一览</h3>
+              <div class="card-showcase">
+                <div class="showcase-item">
+                  <div class="showcase-img-wrap rarity-q">
+                    <img src="/images/about/清赏.jpg" alt="清赏" class="showcase-img" />
+                  </div>
+                  <span class="showcase-label">清赏 ✦</span>
+                </div>
+                <div class="showcase-item">
+                  <div class="showcase-img-wrap rarity-z">
+                    <img src="/images/about/珍赏.jpg" alt="珍赏" class="showcase-img" />
+                  </div>
+                  <span class="showcase-label">珍赏 ✦✦</span>
+                </div>
+                <div class="showcase-item">
+                  <div class="showcase-img-wrap rarity-s">
+                    <img src="/images/about/神品.jpg" alt="神品" class="showcase-img" />
+                  </div>
+                  <span class="showcase-label">神品 ✦✦✦</span>
+                </div>
+              </div>
             </section>
 
             <section class="about-section">
@@ -68,38 +99,75 @@ defineEmits(['close'])
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 380px;
-  max-height: 80vh;
+  max-height: 85vh;
   overflow-y: auto;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 .about-close {
-  background: none;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  background: rgba(0,0,0,0.4);
   border: none;
-  font-size: 18px;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 14px;
   cursor: pointer;
-  padding: 16px 16px 0;
-  display: block;
-  margin-left: auto;
-  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: inherit;
+  transition: 0.15s;
+}
+.about-close:hover {
+  background: rgba(0,0,0,0.6);
 }
 .about-body {
-  padding: 0 20px 24px;
+  padding: 0 0 24px;
+}
+
+/* Banner 装饰顶 */
+.about-banner {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.about-banner .banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.banner-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.55) 100%);
 }
 .about-title {
   font-size: 22px;
   font-weight: 800;
   font-family: var(--font-display);
-  margin: 0 0 2px;
+  margin: 0;
   line-height: 1.3;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.3);
 }
 .about-subtitle {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin: 0 0 20px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+  margin: 4px 0 0;
   letter-spacing: 2px;
 }
 .about-section {
+  padding: 0 20px;
   margin-bottom: 16px;
 }
 .as-heading {
@@ -136,11 +204,51 @@ defineEmits(['close'])
   font-size: 11px;
   font-weight: 600;
 }
+/* 稀有度卡牌展示 */
+.card-showcase {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.showcase-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.showcase-img-wrap {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+.showcase-img-wrap:hover {
+  transform: translateY(-2px);
+}
+.showcase-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+.showcase-img-wrap.rarity-q { border: 1px solid #d4cdc2; }
+.showcase-img-wrap.rarity-z { border: 1px solid #d4c095; }
+.showcase-img-wrap.rarity-s { border: 1.5px solid rgba(212,168,83,0.4); }
+.showcase-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 .about-footer {
   text-align: center;
   font-size: 11px;
   color: var(--text-tertiary);
   margin: 20px 0 0;
+  padding: 0 20px;
   letter-spacing: 1px;
 }
 

@@ -8,7 +8,7 @@ import { ref, computed } from 'vue'
 import {
   PARAMS,
   PROB_TABLE,
-  RESO_BONUS_LV2,
+  RESO_BONUS_TABLE,
   RESO_JUMP_LV4,
   PITY_珍赏_MAX,
   PITY_神品_MAX,
@@ -134,14 +134,23 @@ export const useGameStore = defineStore('game', () => {
     return dev
   })
 
+  /** 应用共鸣概率加成（从清赏转移，保证总和=100，溢出截断） */
+  function applyResoBonus(prob, resoLevel) {
+    const bonus = RESO_BONUS_TABLE[resoLevel] || RESO_BONUS_TABLE[0]
+    const totalDeduct = bonus.zhen + bonus.shen
+    if (totalDeduct === 0) return prob
+    const actualDeduct = Math.min(prob[0], totalDeduct)
+    prob[0] -= actualDeduct
+    const ratio = bonus.zhen / totalDeduct
+    prob[1] += Math.round(actualDeduct * ratio)
+    prob[2] += actualDeduct - Math.round(actualDeduct * ratio)
+    return prob
+  }
+
   /** 当前概率分布 */
   const currentProb = computed(() => {
     let prob = [...PROB_TABLE[deviationCount.value]]
-    if (currentResonance.value.level >= 2) {
-      prob[0] -= RESO_BONUS_LV2.珍赏 + RESO_BONUS_LV2.神品
-      prob[1] += RESO_BONUS_LV2.珍赏
-      prob[2] += RESO_BONUS_LV2.神品
-    }
+    applyResoBonus(prob, currentResonance.value.level)
     if (pityCounter.value.no神品 >= PITY_神品_MAX) {
       prob[2] = Math.min(prob[2] * 2, 90)
       prob[0] = Math.max(0, 100 - prob[1] - prob[2])
@@ -242,12 +251,7 @@ export const useGameStore = defineStore('game', () => {
 
   function rollRarity() {
     let prob = [...PROB_TABLE[deviationCount.value]]
-    const reso = currentResonance.value
-    if (reso.level >= 2) {
-      prob[0] -= RESO_BONUS_LV2.珍赏 + RESO_BONUS_LV2.神品
-      prob[1] += RESO_BONUS_LV2.珍赏
-      prob[2] += RESO_BONUS_LV2.神品
-    }
+    applyResoBonus(prob, currentResonance.value.level)
     if (pityCounter.value.no神品 >= PITY_神品_MAX) {
       prob[2] = Math.min(prob[2] * 2, 90)
       prob[0] = Math.max(0, 100 - prob[1] - prob[2])
@@ -265,7 +269,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // 共鸣跃迁 Lv.4+
-    if (reso.level >= 4 && rarity < 2 && Math.random() * 100 < RESO_JUMP_LV4) {
+    if (currentResonance.value.level >= 4 && rarity < 2 && Math.random() * 100 < RESO_JUMP_LV4) {
       rarity++
     }
 
@@ -357,6 +361,13 @@ export const useGameStore = defineStore('game', () => {
     } catch (err) {
       console.warn('API 调用失败，使用 Mock 降级', err.message)
       mockUsed = true
+      // 前端 fallback：后端完全失败时用风格预览图兜底
+      const MOCK_FALLBACK = {
+        miao_silver: '/images/苗族_古典_横版.jpg',
+        court_dress: '/images/清宫华服_古典_横版.jpg',
+        dunhuang: '/images/敦煌_艺术_横版.jpg',
+      }
+      apiImage = MOCK_FALLBACK[selectedStyle.value] || '/images/苗族_古典_横版.jpg'
       showToast(err.message || '网络波动，已用模拟效果展示', 'info', 5000)
     }
 
@@ -377,7 +388,7 @@ export const useGameStore = defineStore('game', () => {
   }
 
   /** 收藏当前结果到图鉴 */
-  function collectResult() {
+  function collectResult(notify = true) {
     if (!currentResult.value || currentResult.value.collected) return false
 
     currentResult.value.collected = true
@@ -399,8 +410,10 @@ export const useGameStore = defineStore('game', () => {
     // 共鸣 +1（不再在内部 saveState，避免中间态导致新卡被淘汰）
     const upgraded = addResonance(selectedStyle.value)
 
-    // 未读计数
-    newCardCount.value++
+    // 未读计数（自动收藏时跳过，由 confirmNewCard 手动触发）
+    if (notify) {
+      newCardCount.value++
+    }
 
     // 地图：如果是新点亮的风格，增加未查看计数并记录
     if (!wasLit) {
@@ -452,6 +465,12 @@ export const useGameStore = defineStore('game', () => {
 
   function closeGalleryCard() {
     viewingStyleId.value = null
+  }
+
+  /** 确认新卡（让图鉴红点出现） */
+  function confirmNewCard() {
+    newCardCount.value++
+    saveState()
   }
 
   function clearGalleryData() {
@@ -604,6 +623,7 @@ export const useGameStore = defineStore('game', () => {
     showGalleryCard,
     closeGalleryCard,
     clearGalleryData,
+    confirmNewCard,
     deleteCurrentFromGallery,
     saveState,
     loadState,

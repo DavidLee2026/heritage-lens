@@ -38,8 +38,8 @@
             <div class="gi-style">{{ styleName(items) }}</div>
             <div class="gi-meta">
               <span class="gi-count">{{ items.length }} 张</span>
-              <span class="gi-best" :style="{ color: bestColor(items) }">
-                {{ bestLabel(items) }}
+              <span class="gi-reso">
+                共鸣 Lv.{{ store.getStyleResonance(sid).level }}
               </span>
             </div>
           </div>
@@ -79,7 +79,7 @@
           </div>
           <div class="card-footer">
             <span class="card-style-name">{{ styleNameOf(card.style) }}</span>
-            <span class="card-resonance">共鸣 Lv.{{ card.resonance ?? 0 }}</span>
+            <span class="card-resonance">共鸣 Lv.{{ store.getStyleResonance(card.style).level }}</span>
           </div>
         </div>
       </div>
@@ -312,7 +312,7 @@ function onClearConfirm() {
   align-items: center;
 }
 .gi-count { font-size: 10px; color: var(--text-tertiary); }
-.gi-best { font-size: 10px; font-weight: 600; }
+.gi-reso { font-size: 10px; font-weight: 600; color: var(--accent); }
 
 /* ====== 空状态 ====== */
 .gallery-empty {
