@@ -104,6 +104,7 @@ export const useGameStore = defineStore('game', () => {
   // ===== 地图功能 =====
   const mapUnviewedCount = ref(0)    // 未查看的新点亮数量（Tab 红点）
   const justLitStyle = ref(null)     // 刚刚点亮的风格 id（触发涟漪动画）
+  const showNewStylePrompt = ref(false)  // 地图上方"解锁新区域"浮层
 
   /* ================================================================
      计算属性
@@ -420,6 +421,7 @@ export const useGameStore = defineStore('game', () => {
     if (!wasLit) {
       mapUnviewedCount.value++
       justLitStyle.value = selectedStyle.value
+      showNewStylePrompt.value = true  // 显示"解锁新区域"浮层
       setTimeout(() => { justLitStyle.value = null }, 1500)
     }
 
@@ -452,6 +454,7 @@ export const useGameStore = defineStore('game', () => {
   function showMap() {
     viewState.value = 'map'
     mapUnviewedCount.value = 0 // 进入地图清除红点
+    showNewStylePrompt.value = false // 清除"解锁新区域"浮层
     detailStyleId.value = null
   }
 
@@ -590,6 +593,7 @@ export const useGameStore = defineStore('game', () => {
     viewingStyleId,
     mapUnviewedCount,
     justLitStyle,
+    showNewStylePrompt,
 
     // computed
     currentResonance,

@@ -2,16 +2,24 @@
   <Teleport to="body">
     <div v-if="visible" class="overlay show">
       <div class="overlay-box">
-        <div class="forge-icon">🔥</div>
-        <div class="forge-stage">{{ currentStage.stage }}</div>
-        <div class="forge-desc">{{ currentDesc }}</div>
-        <div class="forge-bar">
-          <div class="forge-fill" :style="{ width: progress + '%' }"></div>
+        <div class="forge-icon">
+          <span class="forge-emoji">{{ styleEmoji }}</span>
         </div>
+        <div class="forge-stage">{{ currentStage.stage }}</div>
+        <div class="forge-desc">
+          {{ styleName }}<template v-if="styleName && currentDesc"> · </template>{{ currentDesc }}
+        </div>
+        <div class="forge-bar">
+          <div class="forge-fill" :style="{ width: progress + '%' }">
+            <div class="forge-shimmer"></div>
+          </div>
+        </div>
+        <div class="forge-pct">{{ Math.round(progress) }}%</div>
         <div class="forge-tip-area">
-          <div class="forge-timer">⏱ 预计需要 30 秒</div>
-          <div class="forge-tip-label">非遗冷知识</div>
-          <div class="forge-tip-text">{{ currentTip }}</div>
+          <div class="forge-tip-label">📖 非遗冷知识</div>
+          <transition name="tip-fade" mode="out-in">
+            <div class="forge-tip-text" :key="tipIdx">{{ currentTip }}</div>
+          </transition>
         </div>
       </div>
     </div>
@@ -21,6 +29,7 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { FORGE_TIPS } from '../data/forgeTips.js'
+import { getStyleById } from '../data/styles.js'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -55,6 +64,10 @@ const allTips = computed(() => {
 const currentTip = computed(() => allTips.value[tipIdx.value] || FORGE_TIPS.generic[0])
 
 const currentDesc = computed(() => customDesc.value || currentStageDesc.value)
+
+const styleData = computed(() => getStyleById(props.styleId))
+const styleName = computed(() => styleData.value?.name || '')
+const styleEmoji = computed(() => styleData.value?.emoji || '🔥')
 
 const currentStageDesc = computed(() => {
   let last = STAGES[0]
@@ -166,28 +179,68 @@ onUnmounted(() => stopForge())
   max-width: 360px;
   text-align: center;
 }
-.forge-icon { font-size: 48px; margin-bottom: 12px; animation: pulse 1s ease-in-out infinite; }
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+.forge-icon { font-size: 42px; margin-bottom: 8px; }
+.forge-emoji { display: inline-block; animation: forgePulse 1.2s ease-in-out infinite; }
+@keyframes forgePulse {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.1) rotate(-3deg); }
+  75% { transform: scale(1.1) rotate(3deg); }
 }
 .forge-stage { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.forge-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; }
+.forge-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.4; }
 .forge-bar {
-  height: 6px;
+  height: 8px;
   background: var(--border-primary);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
+  position: relative;
 }
 .forge-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--accent-gold));
   width: 0%;
   transition: width 0.3s;
+  position: relative;
+  overflow: hidden;
 }
-.forge-tip-area { margin-top: 16px; }
-.forge-timer { font-size: 11px; color: var(--text-tertiary); font-weight: 400; margin-bottom: 4px; }
-.forge-tip-label { font-size: 12px; color: var(--text-primary); font-weight: 600; margin-bottom: 3px; }
+.forge-shimmer {
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  animation: shimmer 2s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% { left: -30%; }
+  100% { left: 100%; }
+}
+.forge-pct {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  text-align: right;
+  margin-bottom: 8px;
+}
+.forge-tip-area {
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.forge-tip-label { font-size: 11px; color: var(--text-tertiary); font-weight: 500; margin-bottom: 4px; }
 .forge-tip-text { font-size: 13px; color: var(--text-primary); font-weight: 500; line-height: 1.5; }
+
+/* 提示文字淡入淡出过渡 */
+.tip-fade-enter-active, .tip-fade-leave-active {
+  transition: all 250ms ease;
+}
+.tip-fade-enter-from { opacity: 0; transform: translateY(6px); }
+.tip-fade-leave-to { opacity: 0; transform: translateY(-6px); }
 </style>
