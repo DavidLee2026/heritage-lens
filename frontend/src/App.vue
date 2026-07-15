@@ -74,6 +74,9 @@
       <MapView />
     </template>
 
+    <!-- ===== 版权信息 ===== -->
+    <div class="copyright">© 2026 DAVID LEE · 非遗映像 All Rights Reserved</div>
+
     <!-- ===== 底部导航 ===== -->
     <NavBar />
 
@@ -476,5 +479,14 @@ function onViewCardFromGallery() {
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+/* 版权信息 */
+.copyright {
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  padding: 4px 0 8px;
+  letter-spacing: 0.5px;
 }
 </style>
