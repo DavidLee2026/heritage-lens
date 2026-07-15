@@ -2,12 +2,12 @@
   <Teleport to="body">
     <div v-if="visible" class="overlay show">
       <div class="overlay-box">
-        <!-- 关闭按钮 -->
-        <button
-          v-if="!isFreshResult"
-          class="overlay-close"
-          @click="$emit('close')"
-        >✕</button>
+        <!-- 右上角按钮 -->
+        <template v-if="!isFreshResult || hasRevealed">
+          <button class="overlay-close" @click="$emit('close')">✕</button>
+          <button class="overlay-share" @click="shareCard" :disabled="submitting">📤</button>
+        </template>
+        <button v-else class="overlay-close" disabled style="visibility:hidden">✕</button>
 
         <!-- 卡牌场景 -->
         <div class="card-scene" :class="{ 'card-reveal': justRevealed }">
@@ -79,20 +79,30 @@
                 </div>
               </div>
 
-              <!-- ========== 背面（左对齐 + 窄 banner + 标题在 banner 下） ========== -->
+              <!-- ========== 背面：未揭晓时显示"？"封面，揭晓后显示文化信息 ========== -->
               <div class="flip-face face-back" :class="rarityClass">
                 <div class="paper-texture"></div>
                 <div class="silver-ornament">
                   <template v-if="rarityClass === 'shenpin'"><div></div><div></div></template>
                 </div>
-                <div class="back-seal"><span>非</span><span>遗</span></div>
-                <span class="back-rarity" :class="rarityClass">{{ backContent.rarity }}</span>
-                <div class="back-banner" v-if="bannerImage">
-                  <img :src="bannerImage" class="banner-img" />
+
+                <!-- 问号封面（盲盒效果） -->
+                <div v-if="!hasRevealed" class="mystery-cover">
+                  <div class="mystery-question">?</div>
+                  <div class="mystery-hint">点击揭晓</div>
                 </div>
-                <div class="back-title" v-text="backContent.title"></div>
-                <div class="back-desc" v-text="backContent.desc"></div>
-                <div class="back-source" v-text="backContent.source"></div>
+
+                <!-- 揭晓后：文化信息 -->
+                <template v-else>
+                  <div class="back-seal"><span>非</span><span>遗</span></div>
+                  <span class="back-rarity" :class="rarityClass">{{ backContent.rarity }}</span>
+                  <div class="back-banner" v-if="bannerImage">
+                    <img :src="bannerImage" class="banner-img" />
+                  </div>
+                  <div class="back-title" v-text="backContent.title"></div>
+                  <div class="back-desc" v-text="backContent.desc"></div>
+                  <div class="back-source" v-text="backContent.source"></div>
+                </template>
               </div>
             </div>
           </div>
@@ -106,7 +116,7 @@
           v-text="tooltipText"
         ></div>
 
-        <div class="card-hint">🔄 点击卡牌翻转</div>
+        <div class="card-hint">{{ hintText }}</div>
 
         <!-- 提示词 -->
         <div v-if="store.currentResult?.prompt" class="prompt-display">
@@ -114,28 +124,40 @@
           <span class="prompt-text">{{ store.currentResult.prompt }}</span>
         </div>
 
-        <!-- 生成结果操作 -->
-        <div v-if="isFreshResult" class="result-actions">
+        <!-- 生成结果操作（揭晓后显示） -->
+        <div v-if="isFreshResult && hasRevealed" class="result-actions">
+          <button :disabled="submitting" @click="downloadCard">💾 下载</button>
           <button :disabled="submitting" @click="handleCollect">🏛️ 收入图鉴</button>
           <button class="primary" :disabled="submitting" @click="handleRegen">🔄 再来一次</button>
         </div>
 
         <!-- 图鉴查看操作 -->
-        <div v-else class="result-actions">
+        <div v-else-if="!isFreshResult" class="result-actions">
           <button :disabled="submitting" @click="downloadCard">💾 下载</button>
-          <button :disabled="submitting" @click="shareCard">📤 分享</button>
           <button :disabled="submitting" @click="deleteCard">🗑️ 删除</button>
         </div>
       </div>
     </div>
   </Teleport>
+
+  <!-- 分享海报弹窗 -->
+  <SharePoster
+    :visible="showPoster"
+    :image="cardImage || ''"
+    :style-name="styleName"
+    :style-id="store.currentResult?.style || store.selectedStyle"
+    :rarity="store.currentResult?.rarity || 0"
+    :resonance-level="store.getStyleResonance(store.currentResult?.style || store.selectedStyle).level"
+    @close="showPoster = false"
+  />
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useGameStore } from '../stores/gameStore.js'
 import { getStyleById } from '../data/styles.js'
 import { KNOWLEDGE } from '../data/knowledge.js'
+import SharePoster from './SharePoster.vue'
 import {
   RARITY_NAMES,
   RARITY_CLASS,
@@ -165,6 +187,8 @@ const bubblesVisible = ref(false)
 const tooltipVisible = ref(false)
 const tooltipText = ref('')
 const tooltipStyle = ref({})
+const showPoster = ref(false)
+const hasRevealed = ref(false)   // false=显示"？"封面，true=显示文化信息
 let tiltAnimFrame = null
 
 /* ========== 计算属性 ========== */
@@ -218,6 +242,11 @@ const backContent = computed(() => {
   return c || styleData.value.culture.qingshang
 })
 
+const hintText = computed(() => {
+  if (!hasRevealed.value) return '✨ 点击卡牌揭晓'
+  return isFlipped.value ? '🔄 点击翻转查看正面' : '🔄 点击翻转查看背面'
+})
+
 const leftDims = [
   { idx: 0, icon: BUBBLE_ICONS[0], label: BUBBLE_DIMS[0], delay: 0 },
   { idx: 1, icon: BUBBLE_ICONS[1], label: BUBBLE_DIMS[1], delay: 100 },
@@ -260,11 +289,15 @@ function flipCard() {
 
   // 设置初始状态 — ⚠️ 根据翻转方向设正确透明度
   if (goingToBack) {
-    front.style.opacity = '1'
-    back.style.opacity = '0'
+    front.style.setProperty('opacity', '1', 'important')
+    front.style.setProperty('visibility', 'visible', 'important')
+    back.style.setProperty('opacity', '0', 'important')
+    back.style.setProperty('visibility', 'hidden', 'important')
   } else {
-    front.style.opacity = '0'
-    back.style.opacity = '1'
+    front.style.setProperty('opacity', '0', 'important')
+    front.style.setProperty('visibility', 'hidden', 'important')
+    back.style.setProperty('opacity', '1', 'important')
+    back.style.setProperty('visibility', 'visible', 'important')
   }
   box.style.transform = `rotateY(${startAngle}deg)`
   box.style.webkitTransform = `rotateY(${startAngle}deg)`
@@ -281,21 +314,26 @@ function flipCard() {
     // 在旋转中间点（t=0.5，容器正好 90°，两面皆侧对用户）瞬间切换透明度
     if (t >= 0.5) {
       if (goingToBack) {
-        front.style.opacity = '0'
-        back.style.opacity = '1'
+        front.style.setProperty('opacity', '0', 'important')
+        front.style.setProperty('visibility', 'hidden', 'important')
+        back.style.setProperty('opacity', '1', 'important')
+        back.style.setProperty('visibility', 'visible', 'important')
       } else {
-        front.style.opacity = '1'
-        back.style.opacity = '0'
+        front.style.setProperty('opacity', '1', 'important')
+        front.style.setProperty('visibility', 'visible', 'important')
+        back.style.setProperty('opacity', '0', 'important')
+        back.style.setProperty('visibility', 'hidden', 'important')
+      }
+      // 首次揭晓：在翻转过半（背面不可见时）切换背面内容
+      if (!hasRevealed.value) {
+        hasRevealed.value = true
       }
     }
 
     if (t < 1) {
       requestAnimationFrame(animate)
     } else {
-      // ⚠️ 不清除 transform！保持容器旋转角度，让 face-back 的 rotateY(180deg)
-      // 与容器角度叠加 = 360° = 正对用户。清除 transform 会导致背面朝外不可见。
       if (!goingToBack) {
-        // 返回正面时清除 transform（容器回到 0°，正面自然朝外）
         box.style.transform = ''
         box.style.webkitTransform = ''
       }
@@ -429,25 +467,24 @@ async function downloadCard() {
 }
 
 async function shareCard() {
-  try {
-    const blob = await captureCardBlob()
-    if (navigator.share && navigator.canShare?.({ files: [new File([blob], 'card.png', { type: 'image/png' })] })) {
+  // 移动端优先用原生 Web Share API
+  const canShareFiles = navigator.share && navigator.canShare?.({ files: [new File([''], 'test.png', { type: 'image/png' })] })
+  if (canShareFiles) {
+    try {
+      const blob = await captureCardBlob()
       await navigator.share({
         title: '非遗映像 · 我的卡牌',
         text: '我用非遗映像生成的非遗文化卡牌，来看看吧！🏮',
         files: [new File([blob], '非遗卡牌.png', { type: 'image/png' })],
       })
-    } else if (navigator.share) {
-      await navigator.share({
-        title: '非遗映像 · 我的卡牌',
-        text: '我用非遗映像生成的非遗文化卡牌，来看看吧！🏮',
-      })
-    } else {
-      downloadCard()
+      return
+    } catch (e) {
+      if (e.name === 'AbortError') return
+      // 原生分享失败，降级到海报
     }
-  } catch (e) {
-    if (e.name !== 'AbortError') downloadCard()
   }
+  // 桌面端或不支持文件分享：弹出精美海报
+  showPoster.value = true
 }
 
 /* ========== 打开时触发动画 ========== */
@@ -455,21 +492,58 @@ watch(
   () => props.visible,
   async (v) => {
     if (v) {
-      isFlipped.value = false
+      // 等待 DOM 挂载完成（v-if 从 false→true 触发 DOM 创建）
+      await nextTick()
+      await nextTick()
+      // 再等一帧确保浏览器完成渲染
+      await new Promise(r => setTimeout(r, 50))
+
       justRevealed.value = false
       bubblesVisible.value = false
       tooltipVisible.value = false
       flipAnimating = false
-      // 清除 JS 残留的 inline style，让 CSS 默认透明度生效
+      hasRevealed.value = false
+
       const box = tiltRef.value?.querySelector('.flip-box')
-      if (box) {
-        const front = box.querySelector('.face-front')
-        const back = box.querySelector('.face-back')
-        if (front) front.style.opacity = ''
-        if (back) back.style.opacity = ''
-        box.style.transform = ''
-        box.style.webkitTransform = ''
+      const front = box?.querySelector('.face-front')
+      const back = box?.querySelector('.face-back')
+
+      console.log('[CardReveal] visible=true, isFreshResult=', props.isFreshResult,
+        'tiltRef=', !!tiltRef.value, 'box=', !!box, 'front=', !!front, 'back=', !!back)
+
+      if (props.isFreshResult) {
+        // 新生成结果：背面朝上显示"？"封面
+        isFlipped.value = true
+        if (front) {
+          front.style.setProperty('opacity', '0', 'important')
+          front.style.setProperty('visibility', 'hidden', 'important')
+        }
+        if (back) {
+          back.style.setProperty('opacity', '1', 'important')
+          back.style.setProperty('visibility', 'visible', 'important')
+        }
+        if (box) {
+          box.style.transform = 'rotateY(180deg)'
+          box.style.webkitTransform = 'rotateY(180deg)'
+        }
+      } else {
+        // 图鉴查看：直接显示正面
+        hasRevealed.value = true
+        isFlipped.value = false
+        if (front) {
+          front.style.setProperty('opacity', '1', 'important')
+          front.style.setProperty('visibility', 'visible', 'important')
+        }
+        if (back) {
+          back.style.setProperty('opacity', '0', 'important')
+          back.style.setProperty('visibility', 'hidden', 'important')
+        }
+        if (box) {
+          box.style.transform = ''
+          box.style.webkitTransform = ''
+        }
       }
+
       await nextTick()
       justRevealed.value = true
       setTimeout(() => {
@@ -489,18 +563,23 @@ watch(
   z-index: 100;
   background: rgba(0, 0, 0, 0.7);
   justify-content: center;
-  align-items: center;
-  padding: 20px;
+  align-items: flex-start;
+  padding: 12px;
+  overflow-y: auto;
 }
 .overlay.show { display: flex; }
 .overlay-box {
   background: var(--bg-elevated);
   border-radius: 14px;
-  padding: 24px;
+  padding: 16px;
   width: 100%;
   max-width: 360px;
+  max-height: 90vh;
+  overflow-y: auto;
   text-align: center;
   position: relative;
+  box-sizing: border-box;
+  margin-top: max(12px, 5vh);
 }
 
 .overlay-close {
@@ -529,12 +608,40 @@ watch(
 }
 .overlay-close:active { transform: scale(0.9); }
 
+/* 右上角分享按钮 */
+.overlay-share {
+  position: absolute;
+  top: 6px;
+  right: 40px;
+  z-index: 20;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s;
+  line-height: 1;
+  font-family: inherit;
+}
+.overlay-share:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--text-primary);
+}
+.overlay-share:active { transform: scale(0.9); }
+.overlay-share:disabled { opacity: 0.3; cursor: default; }
+
 /* ========== Card Scene ========== */
 .card-scene {
   -webkit-perspective: 1000px;
   perspective: 1000px;
-  margin: 16px auto;
-  width: 210px;
+  margin: 8px auto;
+  width: 172px;
 }
 .card-scene.card-reveal {
   animation: cardReveal 500ms cubic-bezier(0.23, 1, 0.32, 1) both;
@@ -622,8 +729,8 @@ watch(
 
 /* 稀有度栏 */
 .rarity-bar {
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 4px 8px;
+  font-size: 11px;
   font-weight: 700;
   display: flex;
   justify-content: space-between;
@@ -729,7 +836,7 @@ watch(
 
 /* 卡牌底栏 */
 .card-footer {
-  padding: 6px 10px;
+  padding: 4px 8px;
   display: flex;
   justify-content: space-between;
   position: relative;
@@ -748,11 +855,11 @@ watch(
   background: linear-gradient(180deg, #fef9f0, #f8eee4);
   border-top: 1px solid #e8d4c0;
 }
-.card-style-name { font-weight: 600; font-size: 12px; color: var(--text-primary); }
+.card-style-name { font-weight: 600; font-size: 11px; color: var(--text-primary); }
 .face-front.qingshang .card-style-name { color: #7a7570; }
 .face-front.zhenshang .card-style-name { color: #9a7e28; }
 .face-front.shenpin .card-style-name { color: #8e2a2b; }
-.card-resonance { color: var(--text-secondary); font-size: 12px; }
+.card-resonance { color: var(--text-secondary); font-size: 11px; }
 .face-front.zhenshang .card-resonance { color: #b8a46a; }
 
 /* ========== Back Face ========== */
@@ -938,9 +1045,9 @@ watch(
   justify-content: space-between;
   align-items: flex-end;
   position: absolute;
-  bottom: 16px;
-  left: 8px;
-  right: 8px;
+  bottom: 10px;
+  left: 6px;
+  right: 6px;
   width: auto;
   z-index: 10;
   pointer-events: auto;
@@ -948,7 +1055,7 @@ watch(
 .bubble-col {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 .bubble-col.left { align-items: flex-start; }
 .bubble-col.right { align-items: flex-end; }
@@ -960,14 +1067,14 @@ watch(
   position: relative;
 }
 .bubble {
-  height: 24px;
-  padding: 0 10px;
+  height: 20px;
+  padding: 0 8px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   line-height: 1;
   transition: all 0.3s;
@@ -1021,17 +1128,17 @@ watch(
 
 /* ========== 其他 ========== */
 .card-hint {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   margin-top: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .prompt-display {
   font-size: 10px;
   color: var(--text-tertiary);
-  margin-top: 5px;
+  margin-top: 4px;
   text-align: left;
   line-height: 1.4;
   word-break: break-all;
@@ -1043,15 +1150,15 @@ watch(
 
 .result-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 8px;
 }
 .result-actions button {
   flex: 1;
-  padding: 12px;
+  padding: 10px;
   border-radius: var(--radius-lg);
   border: 1.5px solid var(--border-primary);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   background: var(--bg-elevated);
@@ -1070,4 +1177,30 @@ watch(
 }
 .result-actions button:active { transform: scale(0.96); }
 .result-actions button:disabled:active { transform: none; }
+
+/* ========== 问号封面（盲盒效果） ========== */
+.mystery-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.mystery-question {
+  font-size: 90px;
+  font-weight: 800;
+  color: rgba(142, 42, 43, 0.12);
+  line-height: 1;
+  user-select: none;
+  font-family: var(--font-display);
+}
+.mystery-hint {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 2px;
+}
 </style>

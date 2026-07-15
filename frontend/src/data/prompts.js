@@ -39,14 +39,14 @@ export function buildPrompt(styleId, params, rarity, subjectType = 'female') {
   // 背景描述
   const bg = style.background
 
-  // 参数方向（审美选择）
-  const density = data.params.density[params.density]
-  const pattern = data.params.pattern[params.pattern]
-  const finish = data.params.finish[params.finish]
+  // 参数方向（审美选择）— 优先使用风格专属，无则用全局
+  const density = (style.params && style.params.density[params.density]) || data.params.density[params.density]
+  const pattern = (style.params && style.params.pattern[params.pattern]) || data.params.pattern[params.pattern]
+  const finish = (style.params && style.params.finish[params.finish]) || data.params.finish[params.finish]
   const styleDir = `${density}，${pattern}，${finish}`
 
-  // 品质追加（基于稀有度）
-  const quality = data.rarity[rarity] || ''
+  // 品质追加（基于稀有度）— 优先使用风格专属，无则用全局
+  const quality = (style.rarity && style.rarity[rarity]) || data.rarity[rarity] || ''
 
   // 风格特有 negative
   const styleNeg = data.style_negative[styleId]
