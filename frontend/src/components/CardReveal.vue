@@ -185,9 +185,9 @@ const cardStyleLabel = computed(() => {
 
 /** 背面窄 banner 图片映射 */
 const BANNER_IMG = {
-  miao_silver: '/heritage-lens/images/苗族_古典_横版.jpg',
-  court_dress: '/heritage-lens/images/清宫华服_古典_横版.jpg',
-  dunhuang: '/heritage-lens/images/敦煌_艺术_横版.jpg',
+  miao_silver: '/images/苗族_古典_横版.jpg',
+  court_dress: '/images/清宫华服_古典_横版.jpg',
+  dunhuang: '/images/敦煌_艺术_横版.jpg',
 }
 const bannerImage = computed(() => {
   const sid = result.value?.style || store.selectedStyle
