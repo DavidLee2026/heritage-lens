@@ -22,8 +22,11 @@
       </div>
     </template>
     <template v-else>
-      <img :src="store.uploadImage" class="upload-preview" alt="预览" />
-      <div class="upload-status">✅ 照片已就绪，选择风格开始生成</div>
+      <div class="preview-wrap">
+        <button class="preview-cancel" @click.stop="cancelImage" title="重新选择">✕</button>
+        <img :src="store.uploadImage" class="upload-preview" alt="预览" @click="triggerUpload" />
+        <div class="upload-status">✅ 点击照片可更换 · ✕ 取消选择</div>
+      </div>
     </template>
     <input
       ref="fileInput"
@@ -85,6 +88,11 @@ function handleDrop(e) {
 function handleFile(e) {
   const file = e.target.files?.[0]
   if (file) processFile(file)
+}
+
+function cancelImage() {
+  store.resetUpload()
+  store.showToast('已清除，可重新选择照片或使用样图', 'info')
 }
 
 function processFile(file) {
@@ -162,16 +170,52 @@ function processFile(file) {
 .uo-hint { font-size: 11px; color: var(--text-secondary); }
 
 /* 预览态 */
+.preview-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+.preview-cancel {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 10;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s;
+  line-height: 1;
+  font-family: inherit;
+  backdrop-filter: blur(4px);
+}
+.preview-cancel:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+.preview-cancel:active { transform: scale(0.9); }
 .upload-preview {
   width: 100%;
   max-height: 200px;
   object-fit: contain;
   border-radius: 6px;
+  cursor: pointer;
+  transition: 0.15s;
 }
+.upload-preview:hover { opacity: 0.85; }
+.upload-preview:active { opacity: 0.7; }
 .upload-status {
   font-size: 12px;
   color: var(--text-secondary);
-  margin-top: 8px;
+  margin-top: 6px;
+  text-align: center;
 }
 .file-input { display: none; }
 </style>

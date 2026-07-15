@@ -394,6 +394,16 @@ async function downloadCard() {
   try {
     const blob = await captureCardBlob()
     if (!blob) return
+
+    // 优先用 Web Share API 保存到相册（移动端会弹出共享菜单含"存储到照片"）
+    if (navigator.share && navigator.canShare?.({ files: [new File([blob], '非遗卡牌.png', { type: 'image/png' })] })) {
+      await navigator.share({
+        files: [new File([blob], '非遗卡牌.png', { type: 'image/png' })],
+      })
+      return
+    }
+
+    // 降级：传统的 <a download>（桌面端或 Web Share 不支持文件时）
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.download = '非遗卡牌.png'
@@ -402,8 +412,10 @@ async function downloadCard() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  } catch {
-    alert('下载失败，请尝试截图保存 📸')
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      store.showToast('保存失败，请尝试截图保存 📸', 'error')
+    }
   }
 }
 

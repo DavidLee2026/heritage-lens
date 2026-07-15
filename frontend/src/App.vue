@@ -21,8 +21,20 @@
             <p class="hero-eyebrow">· 非遗映象 ·</p>
             <h2 class="hero-title">上传照片，<br>AI 生成非遗艺术卡牌</h2>
             <p class="hero-desc">千年技艺，一瞬再现。将你的照片转化为苗族银饰、敦煌壁画、清宫华服等非遗风格的收藏卡牌，每一张都是独一无二的文化印记。</p>
-            <button class="hero-cta" @click="scrollToUpload">
-              ✨ 开始创作
+            <button
+              class="hero-cta"
+              :class="{ 'cta-ready': store.canGenerate }"
+              @click="handleHeroCTA"
+            >
+              <template v-if="!store.uploadImage">
+                📸 上传照片开始创作
+              </template>
+              <template v-else-if="!store.selectedStyle">
+                🎨 选择非遗风格
+              </template>
+              <template v-else>
+                ✨ 生成非遗作品
+              </template>
             </button>
           </div>
         </div>
@@ -172,6 +184,20 @@ function scrollToUpload() {
   if (el) el.scrollIntoView({ behavior: 'smooth' })
 }
 
+function handleHeroCTA() {
+  if (store.canGenerate) {
+    // 照片+风格已就绪 → 直接生成，无需滚动到底部
+    handleGenerate()
+  } else if (!store.uploadImage) {
+    // 还没上传照片 → 引导上传
+    scrollToUpload()
+  } else {
+    // 已上传但还没选风格 → 引导选风格
+    const el = document.getElementById('styleSection')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+}
+
 function onImageUploaded() {
   // 自动滚动到风格选择区
   setTimeout(() => {
@@ -314,6 +340,20 @@ function onViewCardFromGallery() {
 .hero-cta:active {
   transform: scale(0.97);
   box-shadow: 0 2px 8px rgba(142, 42, 43, 0.15);
+}
+/* 可生成状态：视觉上更突出，暗示"可以点了" */
+.hero-cta.cta-ready {
+  background: linear-gradient(135deg, var(--accent), #9e2a2b);
+  box-shadow: 0 6px 24px rgba(142, 42, 43, 0.45);
+  animation: ctaBreathe 2.5s ease-in-out infinite;
+}
+.hero-cta.cta-ready:active {
+  transform: scale(0.96);
+  box-shadow: 0 3px 12px rgba(142, 42, 43, 0.25);
+}
+@keyframes ctaBreathe {
+  0%, 100% { box-shadow: 0 6px 24px rgba(142, 42, 43, 0.45); transform: scale(1); }
+  50% { box-shadow: 0 8px 32px rgba(142, 42, 43, 0.60); transform: scale(1.02); }
 }
 
 /* 视觉分隔 */
