@@ -79,6 +79,11 @@
       <GalleryView @view-card="onViewCardFromGallery" />
     </template>
 
+    <!-- ===== 地图视图 ===== -->
+    <template v-else-if="store.viewState === 'map'">
+      <MapView />
+    </template>
+
     <!-- ===== 底部导航 ===== -->
     <NavBar />
 
@@ -139,6 +144,7 @@ import NavBar from './components/NavBar.vue'
 import ForgeOverlay from './components/ForgeOverlay.vue'
 import CardReveal from './components/CardReveal.vue'
 import GalleryView from './components/GalleryView.vue'
+import MapView from './components/MapView.vue'
 import ToastNotice from './components/ToastNotice.vue'
 import AboutModal from './components/AboutModal.vue'
 

@@ -96,10 +96,14 @@ export const useGameStore = defineStore('game', () => {
     if (toastTimer) clearTimeout(toastTimer)
   }
 
-  const viewState = ref('main')      // main | gallery | galleryDetail
+  const viewState = ref('main')      // main | gallery | galleryDetail | map
   const detailStyleId = ref(null)
   const viewingStyleId = ref(null)   // for gallery card viewer
   const lastGenId = ref(0)
+
+  // ===== 地图功能 =====
+  const mapUnviewedCount = ref(0)    // 未查看的新点亮数量（Tab 红点）
+  const justLitStyle = ref(null)     // 刚刚点亮的风格 id（触发涟漪动画）
 
   /* ================================================================
      计算属性
@@ -171,6 +175,23 @@ export const useGameStore = defineStore('game', () => {
     if (!detailStyleId.value) return []
     return gallery.value.filter((g) => g.style === detailStyleId.value)
   })
+
+  /* ===== 地图功能计算属性 ===== */
+
+  /** 已点亮的风格集合（从 gallery 推导，纯前端） */
+  const litStyles = computed(() => {
+    const set = new Set()
+    for (const card of gallery.value) {
+      set.add(card.style)
+    }
+    return set
+  })
+
+  /** 已点亮的风格数量 */
+  const litStyleCount = computed(() => litStyles.value.size)
+
+  /** 地图是否有未查看的更新 */
+  const hasMapUpdate = computed(() => mapUnviewedCount.value > 0)
 
   /* ================================================================
      共鸣系统
@@ -361,6 +382,10 @@ export const useGameStore = defineStore('game', () => {
 
     currentResult.value.collected = true
     const reso = getStyleResonance(selectedStyle.value)
+
+    // 检查是否是该风格的第一张（新点亮）
+    const wasLit = litStyles.value.has(selectedStyle.value)
+
     gallery.value.push({
       id: lastGenId.value,
       style: selectedStyle.value,
@@ -376,6 +401,13 @@ export const useGameStore = defineStore('game', () => {
 
     // 未读计数
     newCardCount.value++
+
+    // 地图：如果是新点亮的风格，增加未查看计数并记录
+    if (!wasLit) {
+      mapUnviewedCount.value++
+      justLitStyle.value = selectedStyle.value
+      setTimeout(() => { justLitStyle.value = null }, 1500)
+    }
 
     // 统一保存：卡已到位，只存一次
     saveState()
@@ -401,6 +433,12 @@ export const useGameStore = defineStore('game', () => {
     newCardCount.value = 0 // 进入图鉴清除红点
     detailStyleId.value = null
     saveState()
+  }
+
+  function showMap() {
+    viewState.value = 'map'
+    mapUnviewedCount.value = 0 // 进入地图清除红点
+    detailStyleId.value = null
   }
 
   function showGalleryDetail(styleId) {
@@ -530,6 +568,8 @@ export const useGameStore = defineStore('game', () => {
     viewState,
     detailStyleId,
     viewingStyleId,
+    mapUnviewedCount,
+    justLitStyle,
 
     // computed
     currentResonance,
@@ -541,6 +581,9 @@ export const useGameStore = defineStore('game', () => {
     galleryByStyle,
     galleryStyleCount,
     detailCards,
+    litStyles,
+    litStyleCount,
+    hasMapUpdate,
 
     // actions
     selectStyle,
@@ -556,6 +599,7 @@ export const useGameStore = defineStore('game', () => {
     clearToast,
     showMain,
     showGallery,
+    showMap,
     showGalleryDetail,
     showGalleryCard,
     closeGalleryCard,
