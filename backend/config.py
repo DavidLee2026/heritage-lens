@@ -28,7 +28,26 @@ USER_DAILY_LIMIT = 10
 BACKEND_DIR = Path(__file__).parent
 MOCK_DEMO_PATH = BACKEND_DIR / "mock_demo.jpg"
 
+# 各风格专属 mock 降级图（风格ID → 文件名映射）
+MOCK_STYLE_MAP = {
+    "miao_silver": "mock_miao_silver.jpg",
+    "court_dress": "mock_court_dress.jpg",
+    "dunhuang": "mock_dunhuang.jpg",
+}
+
+# 加载通用 mock 降级图（兜底）
 MOCK_DEMO_BASE64 = ""
 if MOCK_DEMO_PATH.exists():
     with open(MOCK_DEMO_PATH, "rb") as f:
         MOCK_DEMO_BASE64 = base64.b64encode(f.read()).decode("utf-8")
+
+# 加载各风格专属 mock 降级图
+MOCK_STYLE_BASE64 = {}
+for style_id, filename in MOCK_STYLE_MAP.items():
+    path = BACKEND_DIR / filename
+    if path.exists():
+        with open(path, "rb") as f:
+            MOCK_STYLE_BASE64[style_id] = base64.b64encode(f.read()).decode("utf-8")
+        print(f"  ✅ 已加载 {style_id} mock 图 ({filename})")
+    else:
+        print(f"  ⚠️ 未找到 {style_id} mock 图 ({filename})，将使用通用降级图")

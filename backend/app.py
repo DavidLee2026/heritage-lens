@@ -177,9 +177,9 @@ def generate():
                 print(f"等待 {wait}s 后重试...")
                 time.sleep(wait)
 
-    # Mock 降级
+    # Mock 降级（优先使用风格专属图，兜底使用通用图）
     if not image_result:
-        image_result = config.MOCK_DEMO_BASE64
+        image_result = config.MOCK_STYLE_BASE64.get(style, config.MOCK_DEMO_BASE64)
         mock_used = True
 
     duration = round(time.time() - start_time, 2)
@@ -206,5 +206,6 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5678))
     print(f"非遗映像后端启动，端口 {port}")
     print(f"API Key: {'已配置' if config.ARK_API_KEY else '未配置'}")
-    print(f"Mock: {'已加载' if config.MOCK_DEMO_BASE64 else '未加载'}")
+    mock_count = len(config.MOCK_STYLE_BASE64)
+    print(f"Mock: 通用图{'已加载' if config.MOCK_DEMO_BASE64 else '未加载'}，{mock_count} 个风格专属图已就绪")
     app.run(host="0.0.0.0", port=port, debug=True)
