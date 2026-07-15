@@ -30,7 +30,10 @@
           @click="openDetail(sid)"
         >
           <div class="gi-img" :class="'bg-' + sid" :style="{ background: tileBg(items) }">
-            <div class="gi-img-bg" :class="'bg-' + sid"></div>
+            <!-- 预设背景图：仅在无用户生成图时显示 -->
+            <div v-if="!hasUserImage(items)" class="gi-img-bg" :class="'bg-' + sid"></div>
+            <!-- 用户图片遮罩：增强质感 -->
+            <div v-else class="gi-user-overlay"></div>
             <div class="gi-paper"></div>
             <div class="gi-rarity-bar" :style="{ background: bestColor(items) }"></div>
           </div>
@@ -160,9 +163,25 @@ function styleFullLabel(styleId) {
   if (!style) return '未知'
   return `${style.name} · ${style.heritage}`
 }
+/**
+ * 图鉴封面背景：优先使用用户最新生成的图片，没有则回退到风格渐变
+ */
 function tileBg(items) {
+  // 找最新一张有图片的卡片
+  const cardWithImage = [...items].reverse().find((c) => c.image)
+  if (cardWithImage?.image) {
+    const src = cardWithImage.image.startsWith('data:')
+      ? cardWithImage.image
+      : 'data:image/png;base64,' + cardWithImage.image
+    return `url('${src}') center/cover no-repeat`
+  }
   const style = getStyleById(items[0]?.style)
   return style?.gradient || 'linear-gradient(135deg, #e8e0d4, #f5f0e8)'
+}
+
+/** 是否有用户生成的图片（控制预设背景图是否显示） */
+function hasUserImage(items) {
+  return items.some((c) => c.image)
 }
 
 /* ====== 动作 ====== */
@@ -277,6 +296,13 @@ function onClearConfirm() {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
   background-size: 400px 400px;
   mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.gi-user-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.05) 70%, rgba(0,0,0,0.15) 100%);
+  z-index: 1;
   pointer-events: none;
 }
 .gi-img-bg {

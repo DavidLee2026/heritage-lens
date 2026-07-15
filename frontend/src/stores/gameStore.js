@@ -365,9 +365,18 @@ export const useGameStore = defineStore('game', () => {
       mockUsed = true
       // 前端 fallback：后端完全失败时用风格预览图兜底
       const MOCK_FALLBACK = {
-        miao_silver: '/images/苗族_古典_横版.jpg',
-        court_dress: '/images/清宫华服_古典_横版.jpg',
-        dunhuang: '/images/敦煌_艺术_横版.jpg',
+        miao_silver:    '/images/苗族_古典_横版.jpg',
+        court_dress:    '/images/清宫华服_古典_横版.jpg',
+        dunhuang:       '/images/敦煌_艺术_横版.jpg',
+        tang_dynasty:   '/images/大唐服饰_古典_横版.jpg',
+        ming_brocade:   '/images/大明风华_古典_横版.jpg',
+        su_embroidery:  '/images/苏州刺绣_古典_横版.jpg',
+        batik:          '/images/蜡染蓝韵_古典_横版.jpg',
+        blue_porcelain: '/images/青花瓷纹_古典_横版.jpg',
+        yi_costume:     '/images/彝族服饰_古典_横版.jpg',
+        tibetan:        '/images/藏族文化_古典_横版.jpg',
+        zhuang_brocade: '/images/壮族壮锦_古典_横版.jpg',
+        ming_style:     '/images/明式风格_古典_横版.jpg',
       }
       apiImage = MOCK_FALLBACK[selectedStyle.value] || '/images/苗族_古典_横版.jpg'
       showToast(err.message || '网络波动，已用模拟效果展示', 'info', 5000)

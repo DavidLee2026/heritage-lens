@@ -1,6 +1,9 @@
 <template>
   <div class="header">
-    <h1 class="header-title" @click="goHome">🏮 非遗映像</h1>
+    <div class="header-logo" @click="goHome">
+      <div class="logo-icon"></div>
+      <span class="logo-text">非遗映像</span>
+    </div>
     <span class="header-badge">传承 · 创新</span>
     <button class="header-about" @click="$emit('about')">关于</button>
   </div>
@@ -24,17 +27,36 @@ function goHome() {
   gap: 8px;
   padding: 4px 0;
 }
-.header-title {
-  font-size: 20px;
-  font-weight: 700;
+/* ===== Logo：左图标 + 右文字 ===== */
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   flex: 1;
-  font-family: var(--font-display);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
-.header-title:active {
+.header-logo:active {
   opacity: 0.6;
+}
+/* Logo 图标：直接使用透明 PNG 图标 */
+.logo-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background-image: url('/images/feiyi-icon.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  flex-shrink: 0;
+}
+.logo-text {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  color: #1a365d;                /* 吸取 logo 图标的深藏蓝 */
+  letter-spacing: 1px;
 }
 .header-badge {
   font-size: 13px;

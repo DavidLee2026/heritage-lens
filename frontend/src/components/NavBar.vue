@@ -71,8 +71,11 @@ watch(
   display: flex;
   gap: 8px;
   padding: 8px calc((100% - 420px) / 2 + 16px);
-  background: var(--bg-primary);
-  border-top: 1px solid var(--border-light);
+  /* 磨砂玻璃效果：半透明 + 高斯模糊 */
+  background: rgba(245, 240, 232, 0.75);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  border-top: 1px solid rgba(90, 72, 48, 0.1);
   z-index: 100;
 }
 @media (max-width: 420px) {
@@ -138,13 +141,10 @@ watch(
   100% { transform: scale(1); }
 }
 
-/* 地图按钮浮层 */
+/* 地图按钮容器：与 nav-btn 等宽 */
 .map-btn-wrap {
   flex: 1;
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 .map-btn-wrap .nav-btn {
   width: 100%;

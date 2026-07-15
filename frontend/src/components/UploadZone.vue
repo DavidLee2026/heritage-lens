@@ -7,17 +7,20 @@
     @drop.prevent="handleDrop"
   >
     <template v-if="!store.uploadImage">
-      <!-- 两个选项 -->
       <div class="upload-options">
         <div class="upload-option" @click="triggerUpload">
-          <span class="uo-icon">📸</span>
+          <div class="uo-icon-wrap">
+            <span class="uo-icon">📷</span>
+          </div>
           <span class="uo-label">上传照片</span>
-          <span class="uo-hint">从相册选择</span>
+          <span class="uo-hint">选择一张清晰的正脸照</span>
         </div>
         <div class="upload-option" @click="loadSample">
-          <span class="uo-icon">🖼</span>
+          <div class="uo-icon-wrap uo-icon-wrap--sample">
+            <span class="uo-icon">✨</span>
+          </div>
           <span class="uo-label">使用样例</span>
-          <span class="uo-hint">试试效果</span>
+          <span class="uo-hint">没有照片？先试试效果</span>
         </div>
       </div>
     </template>
@@ -124,7 +127,7 @@ function processFile(file) {
   background: var(--bg-elevated);
   border: 2px dashed var(--border-primary);
   border-radius: var(--radius-lg);
-  padding: 24px 16px;
+  padding: 18px 14px;
   text-align: center;
   cursor: default;
   transition: 0.2s;
@@ -141,7 +144,7 @@ function processFile(file) {
   cursor: pointer;
 }
 
-/* 两个选项 */
+/* ===== 两个选项按钮 ===== */
 .upload-options {
   display: flex;
   gap: 10px;
@@ -151,23 +154,64 @@ function processFile(file) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 18px 8px;
+  gap: 6px;
+  padding: 16px 8px 14px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-primary);
   cursor: pointer;
-  transition: 0.2s;
-  background: var(--bg-primary);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  /* 质感：渐变底 + 内阴影 + 外阴影 */
+  background: linear-gradient(160deg, #ffffff 0%, #f5f0e8 100%);
+  border: 1px solid var(--border-light);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 2px 8px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .upload-option:hover {
-  border-color: var(--accent);
-  background: var(--accent-light);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 6px 20px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-color: var(--accent-gold);
 }
-.upload-option:active { transform: scale(0.97); }
-.uo-icon { font-size: 28px; }
-.uo-label { font-size: 14px; font-weight: 600; }
-.uo-hint { font-size: 11px; color: var(--text-secondary); }
+.upload-option:active {
+  transform: scale(0.97);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* 图标圆形底座 */
+.uo-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a365d 0%, #2a4a7d 100%);
+  box-shadow: 0 2px 8px rgba(26, 54, 93, 0.3);
+  margin-bottom: 2px;
+}
+.uo-icon-wrap--sample {
+  background: linear-gradient(135deg, #8e2a2b 0%, #b8432a 100%);
+  box-shadow: 0 2px 8px rgba(142, 42, 43, 0.3);
+}
+.uo-icon {
+  font-size: 22px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+}
+.uo-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.uo-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
 
 /* 预览态 */
 .preview-wrap {

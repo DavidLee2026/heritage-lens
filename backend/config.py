@@ -28,11 +28,36 @@ USER_DAILY_LIMIT = 10
 BACKEND_DIR = Path(__file__).parent
 MOCK_DEMO_PATH = BACKEND_DIR / "mock_demo.jpg"
 
+# 支持的全部非遗风格（共 12 种）
+STYLE_OPTIONS = [
+    "miao_silver",      # 苗银
+    "court_dress",      # 宫廷服饰
+    "dunhuang",         # 敦煌
+    "tang_dynasty",     # 唐风
+    "ming_brocade",     # 明锦
+    "su_embroidery",    # 苏绣
+    "batik",            # 蜡染
+    "blue_porcelain",   # 青花瓷
+    "yi_costume",       # 彝族服饰
+    "tibetan",          # 藏族
+    "zhuang_brocade",   # 壮锦
+    "ming_style",       # 明式
+]
+
 # 各风格专属 mock 降级图（风格ID → 文件名映射）
 MOCK_STYLE_MAP = {
     "miao_silver": "mock_miao_silver.jpg",
     "court_dress": "mock_court_dress.jpg",
     "dunhuang": "mock_dunhuang.jpg",
+    "tang_dynasty": "mock_tang_dynasty.jpg",
+    "ming_brocade": "mock_ming_brocade.jpg",
+    "su_embroidery": "mock_su_embroidery.jpg",
+    "batik": "mock_batik.jpg",
+    "blue_porcelain": "mock_blue_porcelain.jpg",
+    "yi_costume": "mock_yi_costume.jpg",
+    "tibetan": "mock_tibetan.jpg",
+    "zhuang_brocade": "mock_zhuang_brocade.jpg",
+    "ming_style": "mock_ming_style.jpg",
 }
 
 # 加载通用 mock 降级图（兜底）

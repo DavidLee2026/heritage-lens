@@ -15,48 +15,21 @@
     <template v-if="store.viewState === 'main'">
 
       <div class="main-view">
-        <!-- ===== 引导区 ===== -->
+        <!-- ===== 引导区（标题介绍 + 上传合并） ===== -->
         <div class="hero-section">
           <div class="hero-card">
             <p class="hero-eyebrow">· 非遗映象 ·</p>
             <h2 class="hero-title">上传照片，<br>AI 生成非遗艺术卡牌</h2>
             <p class="hero-desc">千年技艺，一瞬再现。将你的照片转化为苗族银饰、敦煌壁画、清宫华服等非遗风格的收藏卡牌，每一张都是独一无二的文化印记。</p>
-            <button
-              class="hero-cta"
-              :class="{ 'cta-ready': store.canGenerate }"
-              @click="handleHeroCTA"
-            >
-              <template v-if="!store.uploadImage">
-                📸 上传照片开始创作
-              </template>
-              <template v-else-if="!store.selectedStyle">
-                🎨 选择非遗风格
-              </template>
-              <template v-else>
-                ✨ 生成非遗作品
-              </template>
-            </button>
+            <UploadZone @uploaded="onImageUploaded" />
           </div>
         </div>
 
-        <!-- ===== 上传区域 ===== -->
-        <div ref="uploadRef" id="uploadSection">
-          <UploadZone @uploaded="onImageUploaded" />
-        </div>
-
-        <!-- ===== 视觉分隔 ===== -->
-        <div class="section-divider">
-          <span class="sd-line"></span>
-          <span class="sd-dot">✦</span>
-          <span class="sd-line"></span>
-        </div>
-
-        <!-- ===== 风格选择区 ===== -->
-        <div class="style-section" :class="{ 'style-pulse': showStylePulse }" id="styleSection">
+        <!-- ===== 风格选择区（奈飞式沉浸浏览） ===== -->
+        <div class="style-section" :class="{ 'style-pulse': showStylePulse }">
           <div class="section-title">
-            选择非遗风格 <span class="section-label">点击一种，开启文化之旅</span>
+            选择非遗风格 <span class="section-label">滑动浏览，点击选择</span>
           </div>
-          <StyleCarousel />
           <StyleGrid />
         </div>
         <ParamControls />
@@ -146,12 +119,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useGameStore } from './stores/gameStore.js'
 
 import HeaderBar from './components/HeaderBar.vue'
 import ResoBar from './components/ResoBar.vue'
-import StyleCarousel from './components/StyleCarousel.vue'
 import UploadZone from './components/UploadZone.vue'
 import StyleGrid from './components/StyleGrid.vue'
 import ParamControls from './components/ParamControls.vue'
@@ -167,7 +139,7 @@ import AboutModal from './components/AboutModal.vue'
 const store = useGameStore()
 const aboutVisible = ref(false)
 
-/** 共鸣条显示的风格 ID：图鉴详情时用当前浏览风格，其余用选中风格 */
+/** 共鸣条显示的风格 ID */
 const resoStyleId = computed(() => {
   if (store.viewState === 'galleryDetail' && store.detailStyleId) {
     return store.detailStyleId
@@ -175,39 +147,38 @@ const resoStyleId = computed(() => {
   return store.selectedStyle
 })
 
-/* ====== 引导区 ====== */
-const uploadRef = ref(null)
+/* ====== 引导区动画 ====== */
 const showStylePulse = ref(false)
 
-function scrollToUpload() {
-  const el = document.getElementById('uploadSection')
-  if (el) el.scrollIntoView({ behavior: 'smooth' })
-}
-
-function handleHeroCTA() {
-  if (store.canGenerate) {
-    // 照片+风格已就绪 → 直接生成，无需滚动到底部
-    handleGenerate()
-  } else if (!store.uploadImage) {
-    // 还没上传照片 → 引导上传
-    scrollToUpload()
-  } else {
-    // 已上传但还没选风格 → 引导选风格
-    const el = document.getElementById('styleSection')
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+function scrollToStyle() {
+  const el = document.getElementById('styleSection')
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    showStylePulse.value = true
+    setTimeout(() => { showStylePulse.value = false }, 3000)
   }
 }
 
+/** 上传照片后：自动滑到风格选择区 */
 function onImageUploaded() {
-  // 自动滚动到风格选择区
-  setTimeout(() => {
-    const el = document.getElementById('styleSection')
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, 300)
-  // 呼吸动画提示
-  showStylePulse.value = true
-  setTimeout(() => { showStylePulse.value = false }, 4000)
+  setTimeout(() => scrollToStyle(), 300)
 }
+
+/**
+ * 选好风格后：自动滑到页面底部生成按钮
+ */
+watch(() => store.selectedStyle, (newId) => {
+  if (newId && store.uploadImage) {
+    setTimeout(() => {
+      const el = document.querySelector('.btn-gen')
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.classList.add('btn-highlight')
+        setTimeout(() => el.classList.remove('btn-highlight'), 2000)
+      }
+    }, 350)
+  }
+})
 
 /* ====== 叠加层状态 ====== */
 const showForge = ref(false)
@@ -284,7 +255,7 @@ function onViewCardFromGallery() {
 .main-view {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: var(--space-lg);
 }
 
 /* 引导区 */
@@ -295,7 +266,7 @@ function onViewCardFromGallery() {
   background: linear-gradient(135deg, var(--bg-elevated) 0%, #f7f0e6 100%);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
-  padding: 28px 20px 24px;
+  padding: 24px 16px 20px;
   text-align: center;
 }
 .hero-eyebrow {
@@ -318,42 +289,10 @@ function onViewCardFromGallery() {
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.6;
-  margin: 0 0 20px;
+  margin: 0 0 16px;
   max-width: 340px;
   margin-left: auto;
   margin-right: auto;
-}
-.hero-cta {
-  width: 100%;
-  background: linear-gradient(135deg, var(--accent), #b8432a);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-lg);
-  padding: 18px 24px;
-  font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 0.2s;
-  font-family: inherit;
-  box-shadow: 0 4px 14px rgba(142, 42, 43, 0.25);
-}
-.hero-cta:active {
-  transform: scale(0.97);
-  box-shadow: 0 2px 8px rgba(142, 42, 43, 0.15);
-}
-/* 可生成状态：视觉上更突出，暗示"可以点了" */
-.hero-cta.cta-ready {
-  background: linear-gradient(135deg, var(--accent), #9e2a2b);
-  box-shadow: 0 6px 24px rgba(142, 42, 43, 0.45);
-  animation: ctaBreathe 2.5s ease-in-out infinite;
-}
-.hero-cta.cta-ready:active {
-  transform: scale(0.96);
-  box-shadow: 0 3px 12px rgba(142, 42, 43, 0.25);
-}
-@keyframes ctaBreathe {
-  0%, 100% { box-shadow: 0 6px 24px rgba(142, 42, 43, 0.45); transform: scale(1); }
-  50% { box-shadow: 0 8px 32px rgba(142, 42, 43, 0.60); transform: scale(1.02); }
 }
 
 /* 视觉分隔 */
@@ -394,24 +333,30 @@ function onViewCardFromGallery() {
   font-weight: 400;
 }
 
-/* 上传后呼吸动画：提示"选一个风格" */
+/* 风格区高亮脉冲 */
 .style-pulse {
-  animation: pulseHint 4s ease-in-out;
+  animation: sectionPulse 2.5s ease-in-out;
 }
-@keyframes pulseHint {
-  0%, 100% { opacity: 1; }
-  10% { opacity: 0.6; }
-  20% { opacity: 1; }
-  30% { opacity: 0.7; }
-  40% { opacity: 1; }
-  50% { opacity: 0.8; }
-  60% { opacity: 1; }
-  70%, 100% { opacity: 1; }
+@keyframes sectionPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  25% { opacity: 0.85; transform: scale(0.985); }
+  50% { opacity: 1; transform: scale(1.005); }
+  75% { opacity: 0.9; transform: scale(0.99); }
+}
+
+/* 生成按钮高亮提示 */
+.btn-highlight {
+  animation: btnPulse 2s ease-in-out;
+}
+@keyframes btnPulse {
+  0%, 100% { box-shadow: 0 4px 14px rgba(142, 42, 43, 0.25); transform: scale(1); }
+  30% { box-shadow: 0 8px 32px rgba(142, 42, 43, 0.55); transform: scale(1.03); }
+  60% { box-shadow: 0 6px 24px rgba(142, 42, 43, 0.45); transform: scale(1.01); }
 }
 
 /* 生成按钮 */
 .btn-gen {
-  background: var(--accent);
+  background: linear-gradient(135deg, #8e2a2b 0%, #b8432a 100%);
   color: #fff;
   border: none;
   border-radius: var(--radius-lg);
@@ -422,12 +367,15 @@ function onViewCardFromGallery() {
   transition: 0.2s;
   width: 100%;
   font-family: inherit;
+  box-shadow: 0 4px 14px rgba(142, 42, 43, 0.25);
 }
 .btn-gen:active { transform: scale(0.97); opacity: 0.9; }
 .btn-gen:disabled {
-  background: var(--text-tertiary);
+  /* 禁用态也用红色渐变，只是降低透明度 */
+  background: linear-gradient(135deg, #8e2a2b 0%, #b8432a 100%);
   cursor: default;
-  opacity: 0.5;
+  opacity: 0.4;
+  box-shadow: none;
 }
 .btn-gen.btn-breathe {
   animation: breatheGen 2.5s ease-in-out infinite;

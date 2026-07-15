@@ -92,6 +92,7 @@
       <div v-if="detailVisible" class="detail-mask" @click.self="closeDetail">
         <div class="detail-card" :class="{ locked: !detailLoc || !isLit(detailLoc.id) }">
           <button class="detail-close" @click="closeDetail">✕</button>
+          <button v-if="detailLoc && isLit(detailLoc.id)" class="detail-share-btn" @click="shareDetail">📤</button>
 
           <template v-if="detailLoc">
             <!-- 风景图头图 -->
@@ -101,7 +102,7 @@
                 <span class="lock-icon">🔒</span>
               </div>
               <div class="detail-hero-overlay"></div>
-              <div class="detail-hero-info">
+              <div class="detail-hero-info" ref="detailHeroRef">
                 <div class="hero-emoji">{{ isLit(detailLoc.id) ? detailLoc.emoji : '❓' }}</div>
                 <div class="hero-text">
                   <h2>{{ isLit(detailLoc.id) ? detailLoc.name : '待探索' }}</h2>
@@ -184,7 +185,7 @@ const locations = [
     cityShort: '北京',
     emoji: '👑',
     heritage: '京绣 · 国家级非遗',
-    heritageIntro: '京绣又称宫绣，是北京地区的传统刺绣工艺，曾为宫廷御用。以用料讲究、针法精细、色彩华丽著称，与苏绣、湘绣、粤绣并称四大名绣。',
+    heritageIntro: '京绣又称宫绣，是北京地区的传统刺绣工艺，曾为宫廷御用。以用料考究、针法精细、色彩华丽著称，虽非四大名绣，却以宫廷御绣地位享有极高声誉。',
     x: 75,
     y: 30,
     scenery: '/images/map/清宫华服.jpg',
@@ -200,6 +201,114 @@ const locations = [
     x: 34,
     y: 35,
     scenery: '/images/map/敦煌飞天.jpg',
+  },
+  {
+    id: 'tang_dynasty',
+    name: '大唐服饰',
+    city: '陕西 · 西安',
+    cityShort: '西安',
+    emoji: '🏮',
+    heritage: '蜀锦织造 · 双料非遗',
+    heritageIntro: '蜀锦兴于春秋战国，盛于汉唐，是罕见的双料非遗。与宋锦、壮锦、云锦并称"中国四大名锦"，代表了中国古代丝织工艺的最高水平。',
+    x: 52,
+    y: 40,
+    scenery: '/images/map/大唐服饰.jpg',
+  },
+  {
+    id: 'ming_brocade',
+    name: '大明风华',
+    city: '江苏 · 南京',
+    cityShort: '南京',
+    emoji: '🐉',
+    heritage: '南京云锦 · 国家级非遗',
+    heritageIntro: '南京云锦始于东晋，盛于明清，因色泽光丽灿烂如天上云霞而得名，是元明清三朝皇家御用品，代表古代织锦技术最高成就。',
+    x: 72,
+    y: 45,
+    scenery: '/images/map/大明风华.jpg',
+  },
+  {
+    id: 'su_embroidery',
+    name: '苏州刺绣',
+    city: '江苏 · 苏州',
+    cityShort: '苏州',
+    emoji: '🪡',
+    heritage: '苏绣 · 国家级非遗',
+    heritageIntro: '苏绣至今已有两千余年历史，与湘绣、粤绣、蜀绣并称"中国四大名绣"，以精细雅洁著称，具有平齐细密匀顺和光八大特点。',
+    x: 74,
+    y: 47,
+    scenery: '/images/map/苏州刺绣.jpg',
+  },
+  {
+    id: 'batik',
+    name: '蜡染蓝韵',
+    city: '贵州 · 丹寨',
+    cityShort: '丹寨',
+    emoji: '🔵',
+    heritage: '苗族蜡染 · 国家级非遗',
+    heritageIntro: '苗族蜡染古称"蜡缬"，贵州丹寨被誉为"中国蜡染艺术之乡"。以铜制蜡刀蘸取蜂蜡在白布上描绘图案，染后去蜡形成蓝底白花的独特效果。',
+    x: 56,
+    y: 63,
+    scenery: '/images/map/蜡染蓝韵.jpg',
+  },
+  {
+    id: 'blue_porcelain',
+    name: '青花瓷纹',
+    city: '江西 · 景德镇',
+    cityShort: '景德镇',
+    emoji: '🏺',
+    heritage: '景德镇制瓷 · 国家级非遗',
+    heritageIntro: '景德镇素有"瓷都"之称，传统手工制瓷需经历揉泥、拉坯、利坯、施釉、画坯、烧窑等七十二道工序，道道精工，千年传承。',
+    x: 69,
+    y: 50,
+    scenery: '/images/map/青花瓷纹.jpg',
+  },
+  {
+    id: 'yi_costume',
+    name: '彝族服饰',
+    city: '四川 · 凉山',
+    cityShort: '凉山',
+    emoji: '🔥',
+    heritage: '彝族刺绣 · 国家级非遗',
+    heritageIntro: '彝族刺绣以黑、红、黄三色为基调，图案涵盖火焰纹、鹰纹、虎纹等，承载着彝族的创世神话与自然崇拜，是彝族文化的活态传承。',
+    x: 47,
+    y: 55,
+    scenery: '/images/map/彝族服饰.jpg',
+  },
+  {
+    id: 'tibetan',
+    name: '藏族文化',
+    city: '西藏 · 拉萨',
+    cityShort: '拉萨',
+    emoji: '🏔️',
+    heritage: '唐卡彩绘 · 国家级非遗',
+    heritageIntro: '唐卡是藏族传统卷轴绘画艺术，颜料全部取自天然矿物与植物，绘制严格遵循《造像度量经》，千年不褪色，是藏传佛教修持的重要法器。',
+    x: 30,
+    y: 48,
+    scenery: '/images/map/藏族文化.jpg',
+  },
+  {
+    id: 'zhuang_brocade',
+    name: '壮族壮锦',
+    city: '广西 · 南宁',
+    cityShort: '南宁',
+    emoji: '🧵',
+    heritage: '壮族织锦 · 国家级非遗',
+    heritageIntro: '壮锦与蜀锦、宋锦、云锦并称"中国四大名锦"，以色彩鲜艳、几何对称著称，图案多达五十余种，万寿纹、蛙纹最为经典。',
+    x: 54,
+    y: 70,
+    scenery: '/images/map/壮族壮锦.jpg',
+  },
+  {
+    id: 'ming_style',
+    name: '明式风格',
+    city: '江苏 · 苏州',
+    cityShort: '苏州',
+    emoji: '🪑',
+    heritage: '明式家具 · 国家级非遗',
+    heritageIntro: '明式家具是中国古典家具的巅峰之作，以简约洗练、线条流畅著称，榫卯结构不使用一颗钉子，却能使家具牢固百年。',
+    x: 73,
+    y: 46,
+    scenery: '/images/map/明式风格.jpg',
   },
 ]
 
@@ -220,6 +329,7 @@ const rippleStyle = ref(null)
 // 详情弹窗
 const detailVisible = ref(false)
 const detailLoc = ref(null)
+const detailHeroRef = ref(null)
 
 function isLit(id) {
   return store.litStyles.has(id)
@@ -252,6 +362,46 @@ function goToGallery(styleId) {
 function goToGenerate() {
   closeDetail()
   store.showMain()
+}
+
+/** 分享地图详情弹窗内容（截图方式） */
+async function shareDetail() {
+  if (!detailLoc.value || !isLit(detailLoc.value.id)) return
+  const cardEl = document.querySelector('.detail-card')
+  if (!cardEl) return
+
+  try {
+    // 尝试使用 html2canvas 截图
+    let blob = null
+    if (typeof html2canvas !== 'undefined') {
+      const canvas = await html2canvas(cardEl, {
+        backgroundColor: '#f5f0e8',
+        scale: 2,
+        useCORS: true,
+      })
+      blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'))
+    }
+
+    if (blob && navigator.share && navigator.canShare?.({ files: [new File([blob], '非遗足迹.png', { type: 'image/png' })] })) {
+      await navigator.share({
+        title: `非遗映像 · ${detailLoc.value.name}`,
+        text: `${detailLoc.value.city} — ${detailLoc.value.heritageIntro.slice(0, 40)}…`,
+        files: [new File([blob], '非遗足迹.png', { type: 'image/png' })],
+      })
+    } else if (navigator.share) {
+      await navigator.share({
+        title: `非遗映像 · ${detailLoc.value.name}`,
+        text: `${detailLoc.value.city} — ${detailLoc.value.heritageIntro}`,
+      })
+    } else {
+      // 桌面端降级：提示用户截图
+      store.showToast('请截图分享给好友 📸', 'info')
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      store.showToast('分享失败，请尝试截图保存 📸', 'error')
+    }
+  }
 }
 
 // 监听 justLitStyle 变化，触发涟漪动画
@@ -595,6 +745,15 @@ function triggerRipple(xPercent, yPercent) {
 .style-emoji.miao_silver { background: linear-gradient(135deg, #e8e0d4, #f5f0e8); }
 .style-emoji.court_dress { background: linear-gradient(135deg, #f5e6e0, #f0e4cc); }
 .style-emoji.dunhuang { background: linear-gradient(135deg, #f5f0d8, #faf3e0); }
+.style-emoji.tang_dynasty { background: linear-gradient(135deg, #f5e0d8, #fce8c8); }
+.style-emoji.ming_brocade { background: linear-gradient(135deg, #f5ecd0, #f0e0b8); }
+.style-emoji.su_embroidery { background: linear-gradient(135deg, #fce4ec, #f8f0f5); }
+.style-emoji.batik { background: linear-gradient(135deg, #e0f0f8, #c8e4f0); }
+.style-emoji.blue_porcelain { background: linear-gradient(135deg, #e8f0ff, #d0e0f5); }
+.style-emoji.yi_costume { background: linear-gradient(135deg, #f0e0e0, #e8d0c8); }
+.style-emoji.tibetan { background: linear-gradient(135deg, #f5e8d0, #f0e0c0); }
+.style-emoji.zhuang_brocade { background: linear-gradient(135deg, #e0f0e0, #d0e8d0); }
+.style-emoji.ming_style { background: linear-gradient(135deg, #f0e8d8, #e8dcc8); }
 
 .style-info { flex: 1; min-width: 0; }
 .style-name {
@@ -664,6 +823,30 @@ function triggerRipple(xPercent, yPercent) {
   -webkit-tap-highlight-color: transparent;
 }
 .detail-close:active { transform: scale(0.9); }
+
+.detail-share-btn {
+  position: absolute;
+  top: 12px;
+  right: 50px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.75);
+  color: var(--text-primary);
+  font-size: 15px;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s, transform 0.2s;
+}
+.detail-share-btn:hover { background: rgba(255,255,255,0.9); }
+.detail-share-btn:active { transform: scale(0.9); }
 
 /* 风景头图 */
 .detail-hero {

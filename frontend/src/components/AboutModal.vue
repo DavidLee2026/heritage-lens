@@ -26,11 +26,14 @@
             <section class="about-section">
               <h3 class="as-heading">功能</h3>
               <ul class="as-list">
-                <li><strong>AI 生成</strong> — 上传照片，AI 将人像融入苗族银饰、敦煌壁画、清宫华服等非遗风格</li>
+                <li><strong>AI 生成</strong> — 上传照片，AI 将人像融入 12 种非遗风格</li>
                 <li><strong>参数调校</strong> — 调整纹样密度、图案风格、做旧程度，每一张都有你的审美参与</li>
                 <li><strong>稀有度系统</strong> — 清赏、珍赏、神品三种稀有度，每一次生成都是惊喜</li>
-                <li><strong>共鸣升级</strong> — 收集同一风格越多，共鸣等级越高，稀有概率也随之提升</li>
+                <li><strong>共鸣升级</strong> — 收集同一风格越多，共鸣等级越高，解锁共鸣四识气泡</li>
                 <li><strong>图鉴收藏</strong> — 所有生成的卡牌存入图鉴，随时翻阅你的非遗收藏</li>
+                <li><strong>非遗足迹</strong> — 中国地图点亮，生成新风格即解锁对应地域，点亮你的非遗版图</li>
+                <li><strong>卡牌翻转</strong> — 点击卡牌翻转查看背面，阅读该稀有度对应的文化知识</li>
+                <li><strong>分享下载</strong> — 生成的作品支持下载保存和分享给好友</li>
               </ul>
             </section>
 
@@ -62,12 +65,44 @@
             <section class="about-section">
               <h3 class="as-heading">技术</h3>
               <div class="tech-tags">
-                <span class="tech-tag">Vue 3</span>
-                <span class="tech-tag">Pinia</span>
-                <span class="tech-tag">IndexedDB</span>
-                <span class="tech-tag">Flask</span>
-                <span class="tech-tag">AI 图像生成</span>
+                <span class="tech-tag" @click="showTechDetail = !showTechDetail">Vue 3</span>
+                <span class="tech-tag" @click="showTechDetail = !showTechDetail">Pinia</span>
+                <span class="tech-tag" @click="showTechDetail = !showTechDetail">IndexedDB</span>
+                <span class="tech-tag" @click="showTechDetail = !showTechDetail">Flask</span>
+                <span class="tech-tag tech-tag-ai" @click="showTechDetail = !showTechDetail">AI 图像生成</span>
               </div>
+              <transition name="tech-expand">
+                <div v-if="showTechDetail" class="tech-detail">
+                  <div class="tech-row">
+                    <span class="tech-label">AI 模型</span>
+                    <span class="tech-value">豆包 · 即梦 5.0（Seedream）</span>
+                  </div>
+                  <div class="tech-row">
+                    <span class="tech-label">模型版本</span>
+                    <span class="tech-value">doubao-seedream-5-0</span>
+                  </div>
+                  <div class="tech-row">
+                    <span class="tech-label">API 平台</span>
+                    <span class="tech-value">火山方舟 · 火山引擎</span>
+                  </div>
+                  <div class="tech-row">
+                    <span class="tech-label">前端框架</span>
+                    <span class="tech-value">Vue 3 + Pinia + Vite</span>
+                  </div>
+                  <div class="tech-row">
+                    <span class="tech-label">本地存储</span>
+                    <span class="tech-value">IndexedDB（支持大图持久化）</span>
+                  </div>
+                  <div class="tech-row">
+                    <span class="tech-label">后端服务</span>
+                    <span class="tech-value">Flask · API 代理层</span>
+                  </div>
+                  <div class="tech-row">
+                    <span class="tech-label">提示词工程</span>
+                    <span class="tech-value">4 层架构（风格 × 参数 × 背景 × 品质）</span>
+                  </div>
+                </div>
+              </transition>
             </section>
 
             <p class="about-footer">2026 · 以 AI 致敬传统</p>
@@ -79,8 +114,10 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 defineProps({ visible: { type: Boolean, default: false } })
 defineEmits(['close'])
+const showTechDetail = ref(false)
 </script>
 
 <style scoped>
@@ -95,14 +132,18 @@ defineEmits(['close'])
   padding: 20px;
 }
 .about-modal {
+  position: relative;
   background: var(--bg-elevated);
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 380px;
   max-height: 85vh;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
+.about-modal::-webkit-scrollbar { display: none; }
 .about-close {
   position: absolute;
   top: 8px;
@@ -203,7 +244,48 @@ defineEmits(['close'])
   color: var(--accent);
   font-size: 11px;
   font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+  user-select: none;
 }
+.tech-tag:hover { background: #edd5d5; }
+.tech-tag:active { transform: scale(0.95); }
+.tech-tag-ai {
+  background: var(--accent);
+  color: #fff;
+}
+.tech-tag-ai:hover { background: var(--accent-hover); }
+.tech-detail {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tech-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.tech-label {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+.tech-value {
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: right;
+}
+/* 技术详情展开动画 */
+.tech-expand-enter-active { transition: all 0.25s ease; }
+.tech-expand-leave-active { transition: all 0.2s ease; }
+.tech-expand-enter-from { opacity: 0; max-height: 0; transform: translateY(-6px); }
+.tech-expand-leave-to { opacity: 0; max-height: 0; transform: translateY(-6px); }
 /* 稀有度卡牌展示 */
 .card-showcase {
   display: flex;

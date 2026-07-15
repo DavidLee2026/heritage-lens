@@ -50,7 +50,7 @@ const showParams = ref(false)
   gap: 10px;
 }
 
-/* 折叠态：虚线框（和生成按钮同尺寸） */
+/* 折叠态：实底渐变按钮（确保在斜线之上） */
 .params-folded {
   display: flex;
   align-items: center;
@@ -59,18 +59,32 @@ const showParams = ref(false)
   width: 100%;
   padding: 16px;
   border-radius: var(--radius-lg);
-  border: 1.5px dashed var(--border-primary);
+  border: 1px solid var(--border-light);
   cursor: pointer;
-  transition: 0.2s;
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
   user-select: none;
   font-family: inherit;
   box-sizing: border-box;
+  background: linear-gradient(160deg, #ffffff 0%, #f0ebe2 100%);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 2px 8px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .params-folded:hover {
-  border-color: var(--accent);
-  background: var(--accent-light);
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 6px 20px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-color: var(--accent-gold);
 }
-.params-folded:active { transform: scale(0.98); }
+.params-folded:active {
+  transform: scale(0.98);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
 
 /* 展开态：标题行 */
 .params-header {
