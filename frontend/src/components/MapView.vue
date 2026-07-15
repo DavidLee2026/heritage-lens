@@ -30,7 +30,7 @@
     <!-- 地图区域 -->
     <div class="map-container">
       <div class="map-wrapper">
-        <img class="china-map" src="/china-map.png" alt="中国地图" />
+        <img class="china-map" src="/images/map/china-map.png" alt="中国地图" />
 
         <!-- 涟漪效果 -->
         <div v-if="rippleStyle" class="ripple-container">
@@ -175,7 +175,7 @@ const locations = [
     heritageIntro: '苗族银饰锻制技艺是苗族民间传统技艺，以银为原料，经熔银、拉丝、编织等数十道工序制成。每件银饰都承载着苗族的历史与信仰。',
     x: 62,
     y: 66,
-    scenery: '/scenery_miao.jpg',
+    scenery: '/images/map/苗族银饰.jpg',
   },
   {
     id: 'court_dress',
@@ -187,7 +187,7 @@ const locations = [
     heritageIntro: '京绣又称宫绣，是北京地区的传统刺绣工艺，曾为宫廷御用。以用料讲究、针法精细、色彩华丽著称，与苏绣、湘绣、粤绣并称四大名绣。',
     x: 75,
     y: 30,
-    scenery: '/scenery_court.jpg',
+    scenery: '/images/map/清宫华服.jpg',
   },
   {
     id: 'dunhuang',
@@ -199,7 +199,7 @@ const locations = [
     heritageIntro: '敦煌飞天是敦煌莫高窟的艺术名片，融合了印度佛教天人与中国道教羽人的形象，历经千年演变，成为中华文化包容与创新的象征。',
     x: 34,
     y: 35,
-    scenery: '/scenery_dunhuang.jpg',
+    scenery: '/images/map/敦煌飞天.jpg',
   },
 ]
 
