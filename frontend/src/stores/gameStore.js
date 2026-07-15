@@ -78,6 +78,7 @@ export const useGameStore = defineStore('game', () => {
   const isGenerating = ref(false)
   const generateProgress = ref(0)    // 0-100
   const generateState = ref('idle')  // idle | generating | done | error
+  const quotaRemaining = ref(null)   // null=未知，0=今日已用完
   const toastMessage = ref('')
   const toastType = ref('error')   // 'success' | 'error' | 'info'
   let toastTimer = null
@@ -161,6 +162,8 @@ export const useGameStore = defineStore('game', () => {
 
   /** 是否可以生成 */
   const canGenerate = computed(() => {
+    // 已确认额度用尽 → 禁用按钮
+    if (quotaRemaining.value === 0) return false
     return uploadImage.value !== null && selectedStyle.value !== null && !isGenerating.value
   })
 
@@ -324,9 +327,14 @@ export const useGameStore = defineStore('game', () => {
     let mockUsed = false
 
     try {
+      // 🔑 如果浏览器存了管理员令牌，自动带上绕过个人额度
+      const bypassToken = (typeof localStorage !== 'undefined') ? localStorage.getItem('feiyi_bypass') || '' : ''
+      const reqHeaders = { 'Content-Type': 'application/json' }
+      if (bypassToken) reqHeaders['X-Bypass-Token'] = bypassToken
+
       const res = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: reqHeaders,
         body: JSON.stringify({
           image: imageBase64.value,
           image_mime: (uploadImage.value || '').match(/^data:([^;]+)/)?.[1] || 'image/png',
@@ -345,6 +353,14 @@ export const useGameStore = defineStore('game', () => {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
+        // ⛔ 429 = 配额已满 → 不走 Mock 降级，直接返回清晰提示
+        if (res.status === 429) {
+          quotaRemaining.value = 0
+          showToast(err.error || '今日生成次数已达上限，明天再来吧 🏮', 'error', 5000)
+          generateState.value = 'idle'
+          isGenerating.value = false
+          return { quotaExceeded: true }
+        }
         throw new Error(err.error || `请求失败 (${res.status})`)
       }
 
@@ -352,8 +368,13 @@ export const useGameStore = defineStore('game', () => {
       apiImage = data.image
       mockUsed = data.mock || false
 
-      // 用量预警：剩余次数 ≤ 5 时提示用户
+      // 更新剩余额度跟踪
       const remaining = data.quota_remaining
+      if (remaining !== undefined) {
+        quotaRemaining.value = remaining
+      }
+
+      // 用量预警：剩余次数 ≤ 5 时提示用户
       if (remaining !== undefined && remaining <= 5 && remaining > 0) {
         const msg = remaining === 1
           ? '⚠️ 今日生成配额仅剩最后 1 次'
@@ -595,6 +616,7 @@ export const useGameStore = defineStore('game', () => {
     isGenerating,
     generateProgress,
     generateState,
+    quotaRemaining,
     toastMessage,
     toastType,
     viewState,

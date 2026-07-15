@@ -43,7 +43,8 @@
           @click="handleGenerate"
         >
           <template v-if="store.generateState === 'idle'">
-            <template v-if="!store.uploadImage">📸 先上传照片</template>
+            <template v-if="store.quotaRemaining === 0">⛔ 今日已达上限</template>
+            <template v-else-if="!store.uploadImage">📸 先上传照片</template>
             <template v-else-if="!store.selectedStyle">🎨 先选择风格</template>
             <template v-else>✨ 生成非遗作品</template>
           </template>
@@ -198,12 +199,24 @@ async function handleGenerate() {
 
   const result = await store.generate()
 
+  // ⛔ 限额已满：直接关闭锻造动画，不走卡牌弹窗
+  if (result && result.quotaExceeded) {
+    showForge.value = false
+    submitting.value = false
+    return
+  }
+
   // API 返回了，通知锻造动画从 95% 继续推进
   forgeApiDone.value = true
 }
 
 function onForgeComplete() {
   showForge.value = false
+  // 🛡 安全守卫：没有生成结果（如网络断开后重试）→ 不弹卡牌
+  if (!store.currentResult) {
+    if (submitting.value) submitting.value = false
+    return
+  }
   // 自动收藏到图鉴（notify=false 不触发红点，等用户点按钮才触发）
   const upgraded = store.collectResult(false)
   if (upgraded) {

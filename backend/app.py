@@ -124,13 +124,19 @@ def generate():
     lifetime_ok = True  # 每日限额已经够用，总限额暂不新增判断
     user_ok = user_today < config.USER_DAILY_LIMIT
 
-    if not daily_ok:
-        print(f"⚠️ 每日用量已达上限 ({daily['count']}/{config.DAILY_IMAGE_LIMIT})")
-        return jsonify({"error": "今天的生成次数已达上限，明天再来吧 🏮"}), 429
+    # 🔑 管理员绕过：携带正确令牌的设备不受个人额度限制
+    bypass_token = request.headers.get("X-Bypass-Token", "")
+    is_admin = bool(bypass_token) and bypass_token == config.BYPASS_TOKEN
+    if is_admin:
+        user_ok = True  # 跳过个人额度（总预算保护仍在）
 
-    if not user_ok:
-        print(f"⚠️ IP {client_ip} 今日用量已满 ({user_today}/{config.USER_DAILY_LIMIT})")
-        return jsonify({"error": "你的今日生成次数已用完，明天再来试试吧 🏮"}), 429
+    if not daily_ok or not user_ok:
+        reason = "每日总预算" if not daily_ok else "个人额度"
+        print(f"⚠️ {reason}已达上限 (总量 {daily['count']}/{config.DAILY_IMAGE_LIMIT}，IP {user_today}/{config.USER_DAILY_LIMIT})")
+        return jsonify({
+            "error": "今天的生成次数已达上限，明天再来吧 🏮",
+            "quota_remaining": 0,
+        }), 429
 
     # ─── 调 API ─────────────────────────────────────────────
     image_result = None

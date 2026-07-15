@@ -15,15 +15,21 @@ ARK_ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/images/generations"
 ARK_MODEL = os.environ.get("ARK_MODEL", "doubao-seedream-5-0-260128")
 ARK_MAX_IMAGE_MB = 10
 
-# ─── 每日预算控制 ───────────────────────────────────────────
-# 已充值付费，按日预算自动计算上限。评审期间 10 元/天够用
-DAILY_BUDGET_YUAN = 10        # 每天预算（元）
+# ─── 每日预算控制（保护性安全线，非限制性门槛） ────────────
+# 哲学：如果有人用爆预算 → 说明产品被认可，是好事
+# 安全线只是防止一夜归零的兜底，不是用户门槛
+DAILY_BUDGET_YUAN = 200       # 每天预算上限（元）— ≈900张，足够日常 + 爆发
 IMAGE_COST_YUAN = 0.22        # 每张生成成本（元）
-DAILY_IMAGE_LIMIT = int(DAILY_BUDGET_YUAN / IMAGE_COST_YUAN) if DAILY_BUDGET_YUAN > 0 else 999
+DAILY_IMAGE_LIMIT = int(DAILY_BUDGET_YUAN / IMAGE_COST_YUAN) if DAILY_BUDGET_YUAN > 0 else 9999
 
-# ─── 用户级限流（防单人刷爆） ──────────────────────────────
-# 每个 IP 每天最多生成多少张
-USER_DAILY_LIMIT = 10
+# ─── 用户级限流（已停用） ──────────────────────────────────
+# 2026-07-15 决策：不限制个人使用。限制是产品被认可的验证信号。
+USER_DAILY_LIMIT = 99999
+
+# ─── 管理员绕过令牌（已停用 — 保留代码作降级备用） ──────
+# localStorage.setItem('feiyi_bypass', '<密码>') 可绕过旧限流
+# 当前个人限流已停用，此功能作为应急恢复时的快捷开关
+BYPASS_TOKEN = os.environ.get("BYPASS_TOKEN", "feiyi2026")
 
 BACKEND_DIR = Path(__file__).parent
 MOCK_DEMO_PATH = BACKEND_DIR / "mock_demo.jpg"
