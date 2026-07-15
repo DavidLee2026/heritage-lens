@@ -328,6 +328,7 @@ export const useGameStore = defineStore('game', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           image: imageBase64.value,
+          image_mime: (uploadImage.value || '').match(/^data:([^;]+)/)?.[1] || 'image/png',
           style: selectedStyle.value,
           subject_type: 'female',
           rarity_level: rarity,

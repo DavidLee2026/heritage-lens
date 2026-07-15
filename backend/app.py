@@ -105,7 +105,9 @@ def generate():
     if not data or not data.get("image"):
         return jsonify({"error": "缺少图片数据"}), 400
 
-    image_base64 = data["image"]
+    raw_image = data["image"]
+    image_mime = data.get("image_mime", "image/png")
+    image_base64 = raw_image
     style = data.get("style", "miao_silver")
     # 前端已算好稀有度（含共鸣/保底），后端直接使用
     rarity_level = int(data.get("rarity_level", 0))
@@ -143,7 +145,7 @@ def generate():
         payload = {
             "model": config.ARK_MODEL,
             "prompt": arp_prompt,
-            "image": f"data:image/png;base64,{image_base64}",
+            "image": f"data:{image_mime};base64,{image_base64}",
             "size": "1728x2304",
             "response_format": "b64_json",
             "watermark": False,
@@ -154,11 +156,11 @@ def generate():
             "Content-Type": "application/json",
             "Authorization": f"Bearer {config.ARK_API_KEY}",
         }
-        # 重试机制：应对 SSL/网络不稳定，最多重试 3 次
-        max_retries = 3
+        # 重试机制：一次失败重试一次（生图 API 慢，重试太多无意义）
+        max_retries = 2
         for attempt in range(max_retries):
             try:
-                resp = requests.post(config.ARK_ENDPOINT, headers=headers, json=payload, timeout=10)
+                resp = requests.post(config.ARK_ENDPOINT, headers=headers, json=payload, timeout=90)
                 result = resp.json()
                 if resp.status_code == 200 and result.get("data"):
                     image_result = result["data"][0].get("b64_json")
