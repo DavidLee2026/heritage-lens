@@ -870,6 +870,7 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;

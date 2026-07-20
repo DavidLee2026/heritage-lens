@@ -40,7 +40,7 @@ import { PARAMS } from '../data/constants.js'
 
 const store = useGameStore()
 const paramsConfig = PARAMS
-const showParams = ref(false)
+const showParams = ref(true)
 </script>
 
 <style scoped>

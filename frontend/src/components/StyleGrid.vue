@@ -233,6 +233,7 @@ onMounted(() => {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  touch-action: pan-x;
 }
 .card-row::-webkit-scrollbar { display: none; }
 
