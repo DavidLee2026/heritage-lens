@@ -989,7 +989,7 @@ watch(
 .face-back.shenpin .back-rarity { background: linear-gradient(135deg, #f0ded8, #f0e4cc); color: #8e2a2b; }
 .back-title {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.4;
@@ -1016,7 +1016,7 @@ watch(
   object-fit: cover;
 }
 .back-desc {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--text-secondary);
   line-height: 1.5;
   text-align: left;
