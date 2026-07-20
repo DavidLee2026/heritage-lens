@@ -870,7 +870,13 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.face-back::-webkit-scrollbar {
+  display: none;
 }
 .face-back.qingshang {
   background: linear-gradient(180deg, #f5f0e8, #ede6dc);
