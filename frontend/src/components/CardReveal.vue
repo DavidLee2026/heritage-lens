@@ -9,100 +9,102 @@
         </template>
         <button v-else class="overlay-close" disabled style="visibility:hidden">✕</button>
 
-        <!-- 卡牌场景 -->
-        <div class="card-scene" :class="{ 'card-reveal': justRevealed }">
-          <div
-            class="tilt-wrapper"
-            ref="tiltRef"
-            @mousemove="onTiltMove"
-            @mouseenter="tiltActive = true"
-            @mouseleave="onTiltLeave"
-            @click="flipCard"
-          >
-            <div class="flip-box" :class="[rarityClass, { flipped: isFlipped }]">
-              <!-- ========== 正面 ========== -->
-              <div class="flip-face face-front" :class="rarityClass">
-                <div class="paper-texture"></div>
-                <div class="rarity-bar" :class="rarityClass">
-                  <span class="rarity-label" v-html="rarityLabelHtml"></span>
-                  <span class="style-emoji">{{ styleEmoji }}</span>
-                </div>
-                <div class="card-img">
-                  <div class="quality-glow" :class="rarityClass"></div>
-                  <img v-if="cardImage" :src="cardImage" class="card-real-img" alt="生成作品" />
-                  <span v-else class="card-placeholder">🏮</span>
-                  <!-- 共鸣四识气泡 -->
-                  <div class="bubble-row">
-                    <div class="bubble-col left">
-                      <div
-                        v-for="dim in leftDims"
-                        :key="dim.idx"
-                        class="bubble-wrap"
-                        :data-dim="dim.idx"
-                        @mouseenter="showBubbleTip($event, dim.idx)"
-                        @mouseleave="hideBubbleTip"
-                        @click.stop
-                      >
+        <!-- 卡牌场景（包装器承担 1.3x 等比缩放，避免与翻卡/倾斜/animation 的 transform 冲突） -->
+        <div class="card-wrapper">
+          <div class="card-scene" :class="{ 'card-reveal': justRevealed }">
+            <div
+              class="tilt-wrapper"
+              ref="tiltRef"
+              @mousemove="onTiltMove"
+              @mouseenter="tiltActive = true"
+              @mouseleave="onTiltLeave"
+              @click="flipCard"
+            >
+              <div class="flip-box" :class="[rarityClass, { flipped: isFlipped }]">
+                <!-- ========== 正面 ========== -->
+                <div class="flip-face face-front" :class="rarityClass">
+                  <div class="paper-texture"></div>
+                  <div class="rarity-bar" :class="rarityClass">
+                    <span class="rarity-label" v-html="rarityLabelHtml"></span>
+                    <span class="style-emoji">{{ styleEmoji }}</span>
+                  </div>
+                  <div class="card-img">
+                    <div class="quality-glow" :class="rarityClass"></div>
+                    <img v-if="cardImage" :src="cardImage" class="card-real-img" alt="生成作品" />
+                    <span v-else class="card-placeholder">🏮</span>
+                    <!-- 共鸣四识气泡 -->
+                    <div class="bubble-row">
+                      <div class="bubble-col left">
                         <div
-                          class="bubble"
-                          :class="[bubbleClass(dim.idx), { 'pop-in': bubblesVisible }]"
-                          :style="{ animationDelay: dim.delay + 'ms' }"
+                          v-for="dim in leftDims"
+                          :key="dim.idx"
+                          class="bubble-wrap"
+                          :data-dim="dim.idx"
+                          @mouseenter="showBubbleTip($event, dim.idx)"
+                          @mouseleave="hideBubbleTip"
+                          @click.stop
                         >
-                          <span class="b-icon">{{ dim.icon }}</span>{{ dim.label }}
+                          <div
+                            class="bubble"
+                            :class="[bubbleClass(dim.idx), { 'pop-in': bubblesVisible }]"
+                            :style="{ animationDelay: dim.delay + 'ms' }"
+                          >
+                            <span class="b-icon">{{ dim.icon }}</span>{{ dim.label }}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div class="bubble-col right">
-                      <div
-                        v-for="dim in rightDims"
-                        :key="dim.idx"
-                        class="bubble-wrap"
-                        :data-dim="dim.idx"
-                        @mouseenter="showBubbleTip($event, dim.idx)"
-                        @mouseleave="hideBubbleTip"
-                        @click.stop
-                      >
+                      <div class="bubble-col right">
                         <div
-                          class="bubble"
-                          :class="[bubbleClass(dim.idx), { 'pop-in': bubblesVisible }]"
-                          :style="{ animationDelay: dim.delay + 'ms' }"
+                          v-for="dim in rightDims"
+                          :key="dim.idx"
+                          class="bubble-wrap"
+                          :data-dim="dim.idx"
+                          @mouseenter="showBubbleTip($event, dim.idx)"
+                          @mouseleave="hideBubbleTip"
+                          @click.stop
                         >
-                          <span class="b-icon">{{ dim.icon }}</span>{{ dim.label }}
+                          <div
+                            class="bubble"
+                            :class="[bubbleClass(dim.idx), { 'pop-in': bubblesVisible }]"
+                            :style="{ animationDelay: dim.delay + 'ms' }"
+                          >
+                            <span class="b-icon">{{ dim.icon }}</span>{{ dim.label }}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                <div class="card-footer">
-                  <span class="card-style-name">{{ cardStyleLabel }}</span>
-                  <span class="card-resonance">共鸣 Lv.{{ resonanceLevel }}</span>
-                </div>
-              </div>
-
-              <!-- ========== 背面：未揭晓时显示"？"封面，揭晓后显示文化信息 ========== -->
-              <div class="flip-face face-back" :class="rarityClass">
-                <div class="paper-texture"></div>
-                <div class="silver-ornament">
-                  <template v-if="rarityClass === 'shenpin'"><div></div><div></div></template>
-                </div>
-
-                <!-- 问号封面（盲盒效果） -->
-                <div v-if="!hasRevealed" class="mystery-cover">
-                  <div class="mystery-question">?</div>
-                  <div class="mystery-hint">点击揭晓</div>
-                </div>
-
-                <!-- 揭晓后：文化信息 -->
-                <template v-else>
-                  <div class="back-seal"><span>非</span><span>遗</span></div>
-                  <span class="back-rarity" :class="rarityClass">{{ backContent.rarity }}</span>
-                  <div class="back-banner" v-if="bannerImage">
-                    <img :src="bannerImage" class="banner-img" />
+                  <div class="card-footer">
+                    <span class="card-style-name">{{ cardStyleLabel }}</span>
+                    <span class="card-resonance">共鸣 Lv.{{ resonanceLevel }}</span>
                   </div>
-                  <div class="back-title" v-text="backContent.title"></div>
-                  <div class="back-desc" v-text="backContent.desc"></div>
-                  <div class="back-source" v-text="backContent.source"></div>
-                </template>
+                </div>
+
+                <!-- ========== 背面：未揭晓时显示"？"封面，揭晓后显示文化信息 ========== -->
+                <div class="flip-face face-back" :class="rarityClass">
+                  <div class="paper-texture"></div>
+                  <div class="silver-ornament">
+                    <template v-if="rarityClass === 'shenpin'"><div></div><div></div></template>
+                  </div>
+
+                  <!-- 问号封面（盲盒效果） -->
+                  <div v-if="!hasRevealed" class="mystery-cover">
+                    <div class="mystery-question">?</div>
+                    <div class="mystery-hint">点击揭晓</div>
+                  </div>
+
+                  <!-- 揭晓后：文化信息 -->
+                  <template v-else>
+                    <div class="back-seal"><span>非</span><span>遗</span></div>
+                    <span class="back-rarity" :class="rarityClass">{{ backContent.rarity }}</span>
+                    <div class="back-banner" v-if="bannerImage">
+                      <img :src="bannerImage" class="banner-img" />
+                    </div>
+                    <div class="back-title" v-text="backContent.title"></div>
+                    <div class="back-desc" v-text="backContent.desc"></div>
+                    <div class="back-source" v-text="backContent.source"></div>
+                  </template>
+                </div>
               </div>
             </div>
           </div>
@@ -566,6 +568,7 @@ watch(
   align-items: flex-start;
   padding: 12px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 .overlay.show { display: flex; }
 .overlay-box {
@@ -576,6 +579,7 @@ watch(
   max-width: 360px;
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
   text-align: center;
   position: relative;
   box-sizing: border-box;
@@ -635,6 +639,13 @@ watch(
 }
 .overlay-share:active { transform: scale(0.9); }
 .overlay-share:disabled { opacity: 0.3; cursor: default; }
+
+/* ===== 卡牌 1.3x 等比缩放包装器 ===== */
+.card-wrapper {
+  transform: scale(1.3);
+  transform-origin: top center;
+  margin-bottom: 105px;
+}
 
 /* ========== Card Scene ========== */
 .card-scene {
